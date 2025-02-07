@@ -35,8 +35,8 @@ class InputStage : Stage() {
     private fun createCore() {
         isResizable = true
         centerOnScreen()
-        height = 1000.0
-        width = 1000.0
+        height = 400.0
+        width = 400.0
         scene = Scene(root)
         title = "Визуальная атака"
     }
