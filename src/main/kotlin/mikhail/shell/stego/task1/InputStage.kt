@@ -1,4 +1,4 @@
-package mikhail.shell.web.application.mikhail.shell.stego
+package mikhail.shell.stego.task1
 
 import javafx.event.EventHandler
 import javafx.scene.Scene
@@ -96,8 +96,8 @@ class InputStage : Stage() {
         for (x in 0..<bufferedImage.width) {
             for (y in 0..<bufferedImage.height) {
                 val pixel = bufferedImage.getRGB(x, y)
-                val newColor = if (pixel.getBit(bitNumber) == 1) 0xFFFFFFFF else 0xFF000000
-                bufferedImage.setRGB(x, y, newColor.toInt())
+                val newColor = if (pixel.getBit(bitNumber) == 1) 0xFFFFFF else 0x000000
+                bufferedImage.setRGB(x, y, newColor)
             }
         }
         ImageIO.write(bufferedImage, "png", targetPath)
