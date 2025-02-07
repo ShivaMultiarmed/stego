@@ -1,10 +1,9 @@
-package mikhail.shell.web.application
+package mikhail.shell.web.application.mikhail.shell.stego
 
 import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.Spinner
-import javafx.scene.control.TextField
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.HBox

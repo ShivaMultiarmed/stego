@@ -1,10 +1,14 @@
+import org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+
 plugins {
     kotlin("jvm") version "2.0.0"
     id ("org.openjfx.javafxplugin") version "0.1.0"
+    application
+    java
 }
 
-group = "mikhail.shell.web.application"
-version = "1.0-SNAPSHOT"
+group = "mikhail.shell.stego.task1"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -16,13 +20,34 @@ dependencies {
 }
 
 javafx {
-    version = "21.0.1"
+    version = "17.0.1"
     modules = listOf("javafx.controls")
 }
+
+application {
+    mainClass = "mikhail.shell.stego.task1.MainKt"
+}
+
+tasks.jar {
+    archiveFileName = "stego-1-$version.jar"
+    manifest {
+        attributes(
+            "Main-Class" to "mikhail.shell.stego.task1.MainKt"
+        )
+    }
+    from (sourceSets.main.get().output)
+    dependsOn(configurations.runtimeClasspath)
+    duplicatesStrategy = EXCLUDE
+    from ({
+        configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
+    })
+}
+
+
 
 tasks.test {
     useJUnitPlatform()
 }
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
