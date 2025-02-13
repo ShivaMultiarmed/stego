@@ -117,5 +117,5 @@ class InputStage : Stage() {
 }
 
 fun Int.getBit(n: Int): Int {
-    return (0b1 shl n) and this
+    return (this shr n) and 1
 }
