@@ -14,7 +14,7 @@ import javafx.stage.Stage
 import java.io.File
 import javax.imageio.ImageIO
 
-class InputStage : Stage() {
+class VisualAttackingApplication : Stage() {
 
     private val root = VBox()
     private val resultContainer = HBox()
