@@ -3,6 +3,7 @@ package mikhail.shell.stego.task1
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.TextField
+import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import javafx.stage.Stage
@@ -19,6 +20,7 @@ class DwmIntegratingApplication : Stage() {
 
     init {
         scene = Scene(root)
+        show()
         createPickerButton()
         createSavingButton()
         createInputField()
@@ -57,6 +59,11 @@ class DwmIntegratingApplication : Stage() {
         button.setOnMouseClicked {
             if (inputFile != null && outputFile != null) {
                 processImage(inputFile!!, outputFile!!, bytesDWM)
+                val resultImage = ImageView(outputFile!!.absolutePath)
+                if (root.children.last() is ImageView) {
+                    root.children.removeLast()
+                }
+                root.children.add(resultImage)
             }
         }
     }
