@@ -22,7 +22,7 @@ class DwmIntegratingApplication : Stage() {
     private var inputFile: File? = null
     private var outputFile: File? = null
     private var bytesDWM = ByteArray(0)
-    private val maxBits = 0
+    private val sigma = 3
 
     init {
         scene = Scene(root)
@@ -66,7 +66,10 @@ class DwmIntegratingApplication : Stage() {
         button.setOnMouseClicked {
             if (inputFile != null && outputFile != null) {
                 processImage(inputFile!!, outputFile!!)
-                val resultImage = ImageView(outputFile!!.absolutePath)
+                val resultImage = ImageView(outputFile!!.absolutePath).apply {
+                    fitWidth = 300.0
+                    isPreserveRatio = true
+                }
                 try {
                     val previousImageView = root.children.last { it is ImageView }
                     root.children.remove(previousImageView)
@@ -93,12 +96,19 @@ class DwmIntegratingApplication : Stage() {
     private fun extractDwm(file: File): ByteArray {
         val dwmBits = mutableListOf<Int>()
         val bufferedImage = ImageIO.read(file)
-        for (i in 0..<bufferedImage.width) {
-            for (j in 0..<bufferedImage.height) {
+        val dwmBitLength = bytesDWM.size * 8
+        for (i in sigma + 1..<bufferedImage.width - sigma) {
+            for (j in sigma + 1..<bufferedImage.height - sigma) {
                 val pixel = bufferedImage.getRGB(i, j)
                 val B = getBlue(pixel)
                 val avgB = evaluateAverageBlue(bufferedImage, i, j)
                 dwmBits.add(if (B > avgB) 1 else 0)
+                if (dwmBits.size == dwmBitLength) {
+                    break
+                }
+            }
+            if (dwmBits.size == dwmBitLength) {
+                break
             }
         }
         return ByteArray(dwmBits.size / 8) {
@@ -137,8 +147,8 @@ class DwmIntegratingApplication : Stage() {
     private fun processImage(inputFile: File, outputFile: File) {
         val bufferedImage = ImageIO.read(inputFile)
         var bitsWritten = 0
-        for (i in 0..<bufferedImage.width) {
-            for (j in 0..<bufferedImage.height) {
+        for (i in sigma + 1..<bufferedImage.width - sigma) {
+            for (j in sigma + 1..<bufferedImage.height - sigma) {
                 val pixel = bufferedImage.getRGB(i, j)
                 val bit = bytesDWM.getBit(bitsWritten)
                 val newPixel = evaluateNewPixel(pixel, bit, bufferedImage.colorModel.hasAlpha())
