@@ -7,9 +7,11 @@ import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
 import javafx.stage.FileChooser
 import javafx.stage.Stage
+import java.awt.image.BufferedImage
 import java.io.File
 import java.util.Random
 import javax.imageio.ImageIO
+import kotlin.math.roundToInt
 
 class DwmIntegratingApplication : Stage() {
     private val random = Random()
@@ -17,6 +19,7 @@ class DwmIntegratingApplication : Stage() {
     private var inputFile: File? = null
     private var outputFile: File? = null
     private var bytesDWM = ByteArray(0)
+    private val maxBits = 0
 
     init {
         scene = Scene(root)
@@ -58,7 +61,7 @@ class DwmIntegratingApplication : Stage() {
         root.children.add(button)
         button.setOnMouseClicked {
             if (inputFile != null && outputFile != null) {
-                processImage(inputFile!!, outputFile!!, bytesDWM)
+                processImage(inputFile!!, outputFile!!)
                 val resultImage = ImageView(outputFile!!.absolutePath)
                 if (root.children.last() is ImageView) {
                     root.children.removeLast()
@@ -68,14 +71,14 @@ class DwmIntegratingApplication : Stage() {
         }
     }
 
-    private fun processImage(inputFile: File, outputFile: File, dwmBytes: ByteArray) {
+    private fun processImage(inputFile: File, outputFile: File) {
         val bufferedImage = ImageIO.read(inputFile)
         var bitsWritten = 0
         for (i in 0..<bufferedImage.width) {
             for (j in 0..<bufferedImage.height) {
                 val pixel = bufferedImage.getRGB(i, j)
                 val bit = bytesDWM.getBit(bitsWritten)
-                val newPixel = evaluateNewPixel(pixel, bit)
+                val newPixel = evaluateNewPixel(pixel, bit, bufferedImage.colorModel.hasAlpha())
                 bufferedImage.setRGB(i, j, newPixel)
                 bitsWritten++
                 if (bitsWritten == bytesDWM.size * 8)
@@ -93,14 +96,20 @@ class DwmIntegratingApplication : Stage() {
         return bytes
     }
 
-    private fun evaluateNewPixel(pixel: Int, bit: Int): Int {
-        val R = pixel and 0xFF0000 shr 16
-        val G = pixel and 0x00FF00 shr 8
-        val B = pixel and 0x0000FF
+    private fun evaluateNewPixel(pixel: Int, bit: Int, respectAlpha: Boolean = false): Int {
+        val A = if (respectAlpha) (pixel shr 24) and 0xFF else 0xFF
+        val R = (pixel shr 16) and 0xFF
+        val G = (pixel shr 8) and 0xFF
+        val B = pixel and 0xFF
         val Y = 0.3 * R + 0.59 * G + 0.11 * B
         val lambda = 0.1
-        val newB = if (bit == 1) B + lambda * Y else B - lambda * Y
-        return (R shl 16) or (G shl 8) or newB.toInt()
+        val delta = (Y * lambda).roundToInt()
+        val newB = (if (bit == 1) B + delta else B - delta).coerceIn(0..255)
+        return if (respectAlpha) {
+            (A shl 24) or (R shl 16) or (G shl 8) or newB
+        } else {
+            (R shl 16) or (G shl 8) or newB
+        }
     }
 }
 
@@ -108,5 +117,5 @@ fun ByteArray.getBit(bitNumber: Int): Int {
     val byteNumber = bitNumber / 8
     val specificBitNumber = bitNumber % 8
     val byte = this[byteNumber].toInt()
-    return byte shr (8 - specificBitNumber) and 1
+    return byte shr (7 - specificBitNumber) and 1
 }
