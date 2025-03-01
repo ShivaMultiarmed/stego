@@ -121,7 +121,6 @@ class DwmIntegratingApplication : Stage() {
     }
 
     private fun evaluateAverageBlue(bufferedImage: BufferedImage, x: Int, y: Int): Int {
-        val sigma = 3
         var sum = 0
         for (i in 1..sigma) {
             if (x - i >= 0) {
@@ -151,7 +150,7 @@ class DwmIntegratingApplication : Stage() {
             for (j in sigma + 1..<bufferedImage.height - sigma) {
                 val pixel = bufferedImage.getRGB(i, j)
                 val bit = bytesDWM.getBit(bitsWritten)
-                val newPixel = evaluateNewPixel(pixel, bit, bufferedImage.colorModel.hasAlpha())
+                val newPixel = evaluateNewPixel(pixel, bit, bufferedImage.colorModel.pixelSize == 32)
                 bufferedImage.setRGB(i, j, newPixel)
                 bitsWritten++
                 if (bitsWritten == bytesDWM.size * 8)
@@ -170,15 +169,15 @@ class DwmIntegratingApplication : Stage() {
     }
 
     private fun evaluateNewPixel(pixel: Int, bit: Int, respectAlpha: Boolean = false): Int {
-        val A = if (respectAlpha) (pixel shr 24) and 0xFF else 0xFF
         val R = (pixel shr 16) and 0xFF
         val G = (pixel shr 8) and 0xFF
         val B = pixel and 0xFF
-        val Y = 0.3 * R + 0.59 * G + 0.11 * B
+        val Y = 0.298 * R + 0.586 * G + 0.114 * B
         val lambda = 0.1
         val delta = (Y * lambda).roundToInt()
         val newB = (if (bit == 1) B + delta else B - delta).coerceIn(0..255)
         return if (respectAlpha) {
+            val A = (pixel shr 24) and 0xFF
             (A shl 24) or (R shl 16) or (G shl 8) or newB
         } else {
             (R shl 16) or (G shl 8) or newB
