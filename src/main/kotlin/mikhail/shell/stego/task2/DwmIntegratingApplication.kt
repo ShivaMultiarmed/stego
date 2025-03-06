@@ -1,4 +1,4 @@
-package mikhail.shell.stego.task1
+package mikhail.shell.stego.task2
 
 import javafx.scene.Scene
 import javafx.scene.control.Button
@@ -10,10 +10,8 @@ import javafx.stage.FileChooser
 import javafx.stage.Stage
 import java.awt.image.BufferedImage
 import java.io.File
-import java.lang.Math.pow
 import java.util.Random
 import javax.imageio.ImageIO
-import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class DwmIntegratingApplication : Stage() {

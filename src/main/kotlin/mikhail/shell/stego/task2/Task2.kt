@@ -1,4 +1,4 @@
-package mikhail.shell.stego.task1
+package mikhail.shell.stego.task2
 
 import javafx.application.Application
 import javafx.stage.Stage
