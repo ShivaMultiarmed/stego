@@ -77,6 +77,25 @@ tasks.create<Jar>("stego2") {
     })
 }
 
+tasks.create<Jar>("stego3") {
+    archiveFileName = "stego-3.jar"
+    manifest {
+        attributes(
+            "Main-Class" to "mikhail.shell.stego.task3.Task3Kt"
+        )
+    }
+    from(sourceSets.main.get().output) {
+        include("mikhail/shell/stego/task3/**")
+    }
+    dependsOn(configurations.runtimeClasspath)
+    duplicatesStrategy = EXCLUDE
+    from(
+        {
+            configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
+        }
+    )
+}
+
 tasks.test {
     useJUnitPlatform()
 }

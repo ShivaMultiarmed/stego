@@ -18,16 +18,17 @@ import java.awt.Frame
 import java.io.File
 import javax.imageio.ImageIO
 
-enum class ChosenScreen {
-    INTEGRATING_SCREEN, EXTRACTING_SCREEN
+enum class ChosenScreen(val title: String) {
+    INTEGRATING_SCREEN("Вставка данных"),
+    EXTRACTING_SCREEN("Извлечение данных")
 }
 
-fun main(args: Array<String>) = application {
-
+fun main() = application {
+    var chosenScreen by remember { mutableStateOf(ChosenScreen.INTEGRATING_SCREEN) }
     Window(
+        title = chosenScreen.title,
         onCloseRequest = this::exitApplication
     ) {
-        var chosenScreen by remember { mutableStateOf(ChosenScreen.INTEGRATING_SCREEN) }
         Column {
             Row {
                 Button(
@@ -77,7 +78,6 @@ fun IntegratingScreen(
         }
         Button(
             onClick = {
-                val parentPath = inputFilePath?.substringBeforeLast("/")
                 val inputFileName = inputFilePath?.substringAfterLast("/")
                 val rawFilePath = inputFileName?.substringBeforeLast(".")
                 val extension = inputFileName?.substringAfterLast(".")
