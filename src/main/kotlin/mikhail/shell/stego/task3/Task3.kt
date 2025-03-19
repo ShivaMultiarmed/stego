@@ -61,7 +61,17 @@ fun IntegratingScreen(
 ) {
     var data by remember { mutableStateOf("") }
     var inputFilePath by remember { mutableStateOf(null as String?) }
+    val inputBitmapState = remember {
+        inputFilePath?.let {
+            derivedStateOf { ImageIO.read(File(it)) }
+        }
+    }
     var outputFilePath by remember { mutableStateOf(null as String?) }
+    val outputBitmapState = remember {
+        outputFilePath?.let {
+            derivedStateOf { ImageIO.read(File(it)) }
+        }
+    }
     Column {
         TextField(
             value = data,
@@ -83,24 +93,24 @@ fun IntegratingScreen(
                 val extension = inputFileName?.substringAfterLast(".")
                 outputFilePath = "$rawFilePath (с данными).$extension"
                 if (inputFilePath != null) {
-                    insertData(inputFilePath!!, data, outputFilePath!!)
+                    insertData(inputFilePath!!, data)
                 }
             }
         ) {
             Text("Вставить данные")
         }
         Row {
-            if (inputFilePath != null) {
+            inputBitmapState?.value?.let {
                 Image(
                     modifier = Modifier.width(300.dp),
-                    bitmap = ImageIO.read(File(inputFilePath!!)).toComposeImageBitmap(),
+                    bitmap = it.toComposeImageBitmap(),
                     contentDescription = null
                 )
             }
-            if (outputFilePath != null) {
+            outputBitmapState?.value?.let {
                 Image(
                     modifier = Modifier.width(300.dp),
-                    bitmap = ImageIO.read(File(outputFilePath!!)).toComposeImageBitmap(),
+                    bitmap = it.toComposeImageBitmap(),
                     contentDescription = null
                 )
             }
@@ -108,12 +118,9 @@ fun IntegratingScreen(
     }
 }
 
-fun insertData(inputImage: String, data: String, outputImage: String) {
-    val bufferedInputImage = ImageIO.read(File(inputImage))
+fun insertData(inputImage: String, data: String) {
     val dataBytes = data.toByteArray()
-    val bufferedOutputImage = bufferedInputImage.insertData(dataBytes)
-    val extension = outputImage.substringAfterLast(".")
-    ImageIO.write(bufferedOutputImage, extension, File(outputImage))
+    File(inputImage).insertData(dataBytes)
 }
 
 fun openFile(
@@ -153,6 +160,6 @@ fun ExtractingScreen(parent: Frame) {
 }
 
 fun extractData(image: String): String {
-    val bufferedImage = ImageIO.read(File(image))
-    return bufferedImage.extractData().decodeToString()
+    val file = File(image)
+    return file.extractData().decodeToString()
 }

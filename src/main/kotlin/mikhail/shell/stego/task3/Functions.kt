@@ -1,7 +1,11 @@
 package mikhail.shell.stego.task3
 
 import java.awt.image.BufferedImage
+import java.awt.image.DataBufferByte
+import java.io.File
 import java.nio.ByteBuffer
+
+val offset = 200
 
 // Преобразует массив из байтов в массив из пар битов
 fun ByteArray.decompose(): Array<Array<Int>> {
@@ -49,7 +53,7 @@ fun Array<Int>.unite(): Int {
     return result
 }
 
-fun BufferedImage.insertData(byteData: ByteArray): BufferedImage {
+fun File.insertData(byteData: ByteArray): File {
     var currentPairNumber = 0
     val dataLength = byteData.size.let { size ->
         ByteArray(4) { i ->
@@ -58,48 +62,47 @@ fun BufferedImage.insertData(byteData: ByteArray): BufferedImage {
     }
     val decomposedData = byteData.decompose()
     val data = dataLength + decomposedData
-    outer@ for (x in 0 until width) {
-        for (y in 0 until height) {
-            if (currentPairNumber >= data.size) {
-                break@outer
+    val outputFile = File(parentFile, "$name - с данными.$extension")
+
+    inputStream().use { input ->
+        outputFile.outputStream().use { output ->
+            var initialByte: Int
+            var readByteNumber = 0
+            while (input.read().also { initialByte = it } != -1) {
+                if (currentPairNumber < data.size && readByteNumber >= offset) { // оступ от метаданных
+                    val half = initialByte.half
+                    val Cl = arrayOf((half shr 3) and 1, (half shr 2) and 1)
+                    val Cm = arrayOf((half shr 2) and 1, (half shr 1) and 1)
+                    val Cr = arrayOf((half shr 1) and 1, half and 1)
+                    val Bl = if (Cl.contentEquals(data[currentPairNumber])) {
+                        currentPairNumber++
+                        1
+                    } else {
+                        0
+                    }
+                    val Bm = if (currentPairNumber < data.size && Cm.contentEquals(data[currentPairNumber])) {
+                        currentPairNumber++
+                        1
+                    } else {
+                        0
+                    }
+                    val Br = if (currentPairNumber < data.size && Cr.contentEquals(data[currentPairNumber])) {
+                        currentPairNumber++
+                        1
+                    } else {
+                        0
+                    }
+                    val mappingBits = arrayOf(Bl, Bm, Br).unite()
+                    val newByte = initialByte.modifyByte(mappingBits)
+                    output.write(newByte)
+                } else {
+                    output.write(initialByte)
+                }
+                readByteNumber++
             }
-            val pixel = getRGB(x, y)
-            val blue = pixel.B
-
-            val half = blue.half
-
-            val Cl = arrayOf((half shr 3) and 1, (half shr 2) and 1)
-            val Cm = arrayOf((half shr 2) and 1, (half shr 1) and 1)
-            val Cr = arrayOf((half shr 1) and 1, half and 1)
-
-            val Bl = if (Cl.contentEquals(data[currentPairNumber])) {
-                currentPairNumber++
-                1
-            } else {
-                0
-            }
-
-            val Bm = if (currentPairNumber < data.size && Cm.contentEquals(data[currentPairNumber])) {
-                currentPairNumber++
-                1
-            } else {
-                0
-            }
-            val Br = if (currentPairNumber < data.size && Cr.contentEquals(data[currentPairNumber])) {
-                currentPairNumber++
-                1
-            } else {
-                0
-            }
-
-            val mappingBits = arrayOf(Bl, Bm, Br).unite()
-
-            val newBlue = blue.modifyByte(mappingBits)
-            val newPixel = pixel.modifyBlue(newBlue)
-            setRGB(x, y, newPixel)
         }
     }
-    return this
+    return outputFile
 }
 
 // Задаю оператор для индекса по числу
@@ -107,34 +110,37 @@ operator fun Int.get(index: Int): Int {
     return (this shr (7 - index)) and 1
 }
 
-fun BufferedImage.extractData(): ByteArray {
+fun File.extractData(): ByteArray {
     val bits = mutableListOf<Int>()
     var size = 0
-    outer@ for (x in 0..<width) {
-        for (y in 0..<height) {
-            if (size != 0 && bits.size / 8 >= size) {
-                break@outer
-            }
-            if (bits.size / 8 >= 4 && size == 0) {
-                bits.subList(0, 4 * 8).compose().let {
-                    size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt()
+    var byte: Int
+    var readByteNumber = 0
+    inputStream().use { input ->
+        while (input.read().also { byte = it } != -1) {
+            if (readByteNumber >= offset) {
+                if (size != 0 && bits.size / 8 >= size) {
+                    break
                 }
-                bits.subList(0, 4 * 8).clear()
+                if (bits.size / 8 >= 4 && size == 0) {
+                    bits.subList(0, 4 * 8).compose().let {
+                        size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt()
+                    }
+                    bits.subList(0, 4 * 8).clear()
+                }
+                val Bl = byte[5]
+                if (Bl == 1) {
+                    bits.addAll(listOf(byte[0], byte[1]))
+                }
+                val Bm = byte[6]
+                if (Bm == 1) {
+                    bits.addAll(listOf(byte[1], byte[2]))
+                }
+                val Br = byte[7]
+                if (Br == 1) {
+                    bits.addAll(listOf(byte[2], byte[3]))
+                }
             }
-            val pixel = getRGB(x, y)
-            val blue = pixel.B
-            val Bl = blue[5]
-            if (Bl == 1) {
-                bits.addAll(listOf(blue[0], blue[1]))
-            }
-            val Bm = blue[6]
-            if (Bm == 1) {
-                bits.addAll(listOf(blue[1], blue[2]))
-            }
-            val Br = blue[7]
-            if (Br == 1) {
-                bits.addAll(listOf(blue[2], blue[3]))
-            }
+            readByteNumber++
         }
     }
     return bits.take(size * 8).compose()
