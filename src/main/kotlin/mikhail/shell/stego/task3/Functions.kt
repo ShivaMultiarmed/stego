@@ -1,6 +1,7 @@
 package mikhail.shell.stego.task3
 
 import java.awt.image.BufferedImage
+import java.nio.ByteBuffer
 
 // Преобразует массив из байтов в массив из пар битов
 fun ByteArray.decompose(): Array<Array<Int>> {
@@ -48,8 +49,15 @@ fun Array<Int>.unite(): Int {
     return result
 }
 
-fun BufferedImage.insertData(data: Array<Array<Int>>): BufferedImage {
+fun BufferedImage.insertData(byteData: ByteArray): BufferedImage {
     var currentPairNumber = 0
+    val dataLength = byteData.size.let { size ->
+        ByteArray(4) { i ->
+            (size shr ((3 - i) * 8) and 0xFF).toByte()
+        }.decompose()
+    }
+    val decomposedData = byteData.decompose()
+    val data = dataLength + decomposedData
     outer@ for (x in 0 until width) {
         for (y in 0 until height) {
             if (currentPairNumber >= data.size) {
@@ -101,8 +109,18 @@ operator fun Int.get(index: Int): Int {
 
 fun BufferedImage.extractData(): ByteArray {
     val bits = mutableListOf<Int>()
-    for (x in 0..<width) {
+    var size = 0
+    outer@ for (x in 0..<width) {
         for (y in 0..<height) {
+            if (size != 0 && bits.size / 8 >= size) {
+                break@outer
+            }
+            if (bits.size / 8 >= 4 && size == 0) {
+                bits.subList(0, 4 * 8).compose().let {
+                    size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt()
+                }
+                bits.subList(0, 4 * 8).clear()
+            }
             val pixel = getRGB(x, y)
             val blue = pixel.B
             val Bl = blue[5]
@@ -119,7 +137,7 @@ fun BufferedImage.extractData(): ByteArray {
             }
         }
     }
-    return bits.compose()
+    return bits.take(size * 8).compose()
 }
 
 fun List<Int>.compose(): ByteArray {

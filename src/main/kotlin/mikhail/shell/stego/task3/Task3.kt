@@ -1,6 +1,5 @@
 package mikhail.shell.stego.task3
 
-import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -8,13 +7,13 @@ fun main(args: Array<String>) {
     val parentPath = "C:/Users/Mikhail_Shell/Desktop/"
     val projectPath = "src/main/kotlin/mikhail/shell/stego/task3/"
 
-    val inputFile = File(parentPath, "1.bmp")
+    val inputFile = File(parentPath, "1.png")
     val extension = inputFile.extension
     val inputImage = ImageIO.read(inputFile)
 
     File(projectPath, "inputBits.txt").printWriter().use { writer ->
-        for (x in 0 ..< inputImage.width) {
-            for (y in 0 ..< inputImage.height) {
+        for (x in 0..<inputImage.width) {
+            for (y in 0..<inputImage.height) {
                 val pixel = inputImage.getRGB(x, y)
                 val blueComponent = pixel.B
                 for (i in 0..7) {
@@ -27,9 +26,9 @@ fun main(args: Array<String>) {
 
     val dataFile = File("src/main/kotlin/mikhail/shell/stego/task3/data.txt")
     val dataString = dataFile.bufferedReader().use { it.readLines().joinToString("") }
-    val dataBytes = dataString.toByteArray(Charsets.UTF_8)
+    val byteData = dataString.toByteArray(Charsets.UTF_8)
 
-    val decomposedBits = dataBytes.decompose()
+    val decomposedBits = byteData.decompose()
 
     File(projectPath, "decomposedBits.txt").printWriter().use { writer ->
         decomposedBits.forEach { bitPair ->
@@ -37,11 +36,11 @@ fun main(args: Array<String>) {
         }
     }
 
-    val outputImage = inputImage.insertData(decomposedBits)
+    val outputImage = inputImage.insertData(byteData)
 
     File(projectPath, "outputBits.txt").printWriter().use { writer ->
-        for (x in 0 ..< outputImage.width) {
-            for (y in 0 ..< outputImage.height) {
+        for (x in 0..<outputImage.width) {
+            for (y in 0..<outputImage.height) {
                 val pixel = outputImage.getRGB(x, y)
                 val blueComponent = pixel.B
                 for (i in 0..7) {
