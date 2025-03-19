@@ -1,9 +1,10 @@
 package mikhail.shell.stego.task3
 
-import java.awt.image.BufferedImage
-import java.awt.image.DataBufferByte
 import java.io.File
 import java.nio.ByteBuffer
+import kotlin.math.log
+import kotlin.math.log10
+import kotlin.math.pow
 
 val offset = 200
 
@@ -19,18 +20,8 @@ fun ByteArray.getBit(bitNumber: Int): Int {
     val byteNumber = bitNumber / 8
     val specificBitNumber = bitNumber % 8
     val byte = this[byteNumber].toInt() and 0xFF
-    return (byte shr (7 - specificBitNumber)) and 1
+    return byte[specificBitNumber]
 }
-
-val Int.R: Int
-    get() = (this shr 16) and 0xFF
-
-val Int.G: Int
-    get() = (this shr 8) and 0xFF
-
-val Int.B: Int
-    get() = this and 0xFF
-
 
 val Int.half: Int
     get() = this shr 4
@@ -38,10 +29,6 @@ val Int.half: Int
 
 fun Int.modifyByte(mappingBits: Int): Int {
     return (this and 0xF8) or (mappingBits and 0x07)
-}
-
-fun Int.modifyBlue(newBlue: Int): Int {
-    return (this and 0xFFFFFF00.toInt()) or (newBlue and 0xFF)
 }
 
 // Приводит [BL, BM, Br] к единому числу
@@ -62,7 +49,7 @@ fun File.insertData(byteData: ByteArray): File {
     }
     val decomposedData = byteData.decompose()
     val data = dataLength + decomposedData
-    val outputFile = File(parentFile, "$name - с данными.$extension")
+    val outputFile = File(parentFile, "$nameWithoutExtension-output.$extension")
 
     inputStream().use { input ->
         outputFile.outputStream().use { output ->
@@ -152,6 +139,28 @@ fun List<Int>.compose(): ByteArray {
     }
 }
 
-fun Int.getBit(n: Int): Int {
-    return (this shr (7 - n)) and 1
+fun evaluateMSE(
+    file1: File,
+    file2: File
+): Float {
+    val input1 = file1.inputStream()
+    val input2 = file2.inputStream()
+
+    var currentByte1: Int
+    var currentByte2: Int
+    var mse = 0.0f
+    while(input1.read().also { currentByte1 = it; } != -1) {
+        currentByte2 = input2.read()
+        mse += (currentByte1 - currentByte2).toDouble().pow(2.0).toFloat()
+    }
+    mse /= file1.length()
+
+    input1.close()
+    input2.close()
+
+    return mse
+}
+
+fun evaluatePSNR(max: Float, mse: Float): Float {
+    return 10 * log10(max.pow(2) / mse)
 }

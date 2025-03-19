@@ -3,7 +3,10 @@ package mikhail.shell.stego.task3
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -13,6 +16,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberTrayState
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -29,7 +33,12 @@ fun main() = application {
         title = chosenScreen.title,
         onCloseRequest = this::exitApplication
     ) {
-        Column {
+        Column(
+            modifier = Modifier
+                .width(600.dp)
+                .height(1000.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
             Row {
                 Button(
                     onClick = {
@@ -61,23 +70,24 @@ fun IntegratingScreen(
 ) {
     var data by remember { mutableStateOf("") }
     var inputFilePath by remember { mutableStateOf(null as String?) }
-    val inputBitmapState = remember {
-        inputFilePath?.let {
-            derivedStateOf { ImageIO.read(File(it)) }
-        }
+    val inputBitmapState = remember(inputFilePath) {
+        inputFilePath?.let { ImageIO.read(File(it)) }?.toComposeImageBitmap()
     }
     var outputFilePath by remember { mutableStateOf(null as String?) }
-    val outputBitmapState = remember {
-        outputFilePath?.let {
-            derivedStateOf { ImageIO.read(File(it)) }
-        }
+    val outputBitmapState = remember(outputFilePath) {
+        outputFilePath?.let { ImageIO.read(File(it)) }?.toComposeImageBitmap()
     }
+    var mse by remember { mutableStateOf(null as Float?) }
+    var psnr by remember { mutableStateOf(null as Float?) }
     Column {
         TextField(
             value = data,
             onValueChange = {
                 data = it
-            }
+            },
+            modifier = Modifier
+                .width(600.dp)
+                .height(400.dp)
         )
         Button(
             onClick = {
@@ -91,36 +101,48 @@ fun IntegratingScreen(
                 val inputFileName = inputFilePath?.substringAfterLast("/")
                 val rawFilePath = inputFileName?.substringBeforeLast(".")
                 val extension = inputFileName?.substringAfterLast(".")
-                outputFilePath = "$rawFilePath (с данными).$extension"
+                outputFilePath = "$rawFilePath-output.$extension"
                 if (inputFilePath != null) {
-                    insertData(inputFilePath!!, data)
+                    outputFilePath = insertData(inputFilePath!!, data).path
+                    mse = evaluateMSE(File(inputFileName!!), File(outputFilePath!!))
+                    psnr = evaluatePSNR(255f, mse!!)
                 }
             }
         ) {
             Text("Вставить данные")
         }
-        Row {
-            inputBitmapState?.value?.let {
-                Image(
-                    modifier = Modifier.width(300.dp),
-                    bitmap = it.toComposeImageBitmap(),
-                    contentDescription = null
-                )
+        Column {
+            mse?.let {
+                Text("Вычисленный MSE = $it")
             }
-            outputBitmapState?.value?.let {
-                Image(
-                    modifier = Modifier.width(300.dp),
-                    bitmap = it.toComposeImageBitmap(),
-                    contentDescription = null
-                )
+            psnr?.let {
+                Text("Вычисленный PSNR = $it")
+            }
+            Row {
+                inputBitmapState?.let {
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+                outputBitmapState?.let {
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
             }
         }
     }
 }
 
-fun insertData(inputImage: String, data: String) {
+fun insertData(inputImage: String, data: String): File {
     val dataBytes = data.toByteArray()
-    File(inputImage).insertData(dataBytes)
+    val inputFile = File(inputImage)
+    val outputFile = inputFile.insertData(dataBytes)
+    return outputFile
 }
 
 fun openFile(
