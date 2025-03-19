@@ -1,78 +1,86 @@
 import org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 
 plugins {
-    kotlin("jvm") version "2.0.0"
-    id ("org.openjfx.javafxplugin") version "0.1.0"
+    kotlin("jvm") version "1.9.0" // Use the latest stable Kotlin version
+    id("org.openjfx.javafxplugin") version "0.1.0" // Only if using JavaFX
     java
+    id("org.jetbrains.compose") version "1.5.0" // Use the latest Compose Multiplatform version
 }
 
-group = "mikhail.shell.stego.task1"
+group = "mikhail.shell.stego"
 version = "1.0"
 
 repositories {
     mavenCentral()
+    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    google()
 }
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("org.openjfx:javafx:17")
+    implementation("org.openjfx:javafx:17") // Only if using JavaFX
+    implementation(compose.desktop.currentOs) // Required for Compose Multiplatform
 }
 
 javafx {
     version = "17.0.1"
-    modules = listOf("javafx.controls")
+    modules = listOf("javafx.controls") // Only if using JavaFX
 }
 
-//tasks.jar {
-//    archiveFileName = "stego-1-$version.jar"
-//    manifest {
-//        attributes(
-//            "Main-Class" to "mikhail.shell.stego.task1.MainKt"
-//        )
-//    }
-//    from (sourceSets.main.get().output)
-//    dependsOn(configurations.runtimeClasspath)
-//    duplicatesStrategy = EXCLUDE
-//    from ({
-//        configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
-//    })
-//}
+compose.desktop {
+    application {
+        mainClass = "mikhail.shell.stego.task3.Task3Kt" // Replace with your main class
 
-tasks.create<Jar>("stego1"){
+        nativeDistributions {
+            targetFormats(
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb
+            )
+            packageName = "FirstKMProject"
+            packageVersion = "1.0.0"
+        }
+    }
+}
+
+tasks.create<Jar>("stego1") {
     archiveFileName = "stego-1.jar"
     manifest {
         attributes(
             "Main-Class" to "mikhail.shell.stego.task1.Task1Kt"
         )
     }
-    from (sourceSets.main.get().output) {
+    from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task1/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
-    from ({
+    from({
         configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
     })
 }
-tasks.create<Jar>("stego2"){
+
+tasks.create<Jar>("stego2") {
     archiveFileName = "stego-2.jar"
     manifest {
         attributes(
             "Main-Class" to "mikhail.shell.stego.task2.Task2Kt"
         )
     }
-    from (sourceSets.main.get().output) {
+    from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task2/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
-    from ({
+    from({
         configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
     })
 }
+
 tasks.test {
     useJUnitPlatform()
 }
+
 kotlin {
     jvmToolchain(17)
 }

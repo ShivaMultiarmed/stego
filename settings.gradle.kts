@@ -1,5 +1,20 @@
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
-}
-rootProject.name = "untitled"
+pluginManagement {
+    repositories {
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        mavenCentral()
+        google()
+        gradlePluginPortal()
+        mavenCentral()
+    }
 
+    val kotlinVersion = "2.1.20-RC3"
+    val composeVersion = "1.5.0"
+
+    plugins {
+        kotlin("jvm").version(kotlinVersion)
+        id("org.jetbrains.compose").version(composeVersion)
+        id("org.jetbrains.kotlin.plugin.compose").version(kotlinVersion)
+    }
+}
+
+rootProject.name = "Stego Project"

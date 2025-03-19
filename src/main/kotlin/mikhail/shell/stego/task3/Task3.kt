@@ -1,61 +1,158 @@
 package mikhail.shell.stego.task3
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.Button
+import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
+import java.awt.FileDialog
+import java.awt.Frame
 import java.io.File
 import javax.imageio.ImageIO
 
-fun main(args: Array<String>) {
-    val parentPath = "C:/Users/Mikhail_Shell/Desktop/"
-    val projectPath = "src/main/kotlin/mikhail/shell/stego/task3/"
+enum class ChosenScreen {
+    INTEGRATING_SCREEN, EXTRACTING_SCREEN
+}
 
-    val inputFile = File(parentPath, "1.png")
-    val extension = inputFile.extension
-    val inputImage = ImageIO.read(inputFile)
+fun main(args: Array<String>) = application {
 
-    File(projectPath, "inputBits.txt").printWriter().use { writer ->
-        for (x in 0..<inputImage.width) {
-            for (y in 0..<inputImage.height) {
-                val pixel = inputImage.getRGB(x, y)
-                val blueComponent = pixel.B
-                for (i in 0..7) {
-                    writer.write(blueComponent.getBit(i).toString())
+    Window(
+        onCloseRequest = this::exitApplication
+    ) {
+        var chosenScreen by remember { mutableStateOf(ChosenScreen.INTEGRATING_SCREEN) }
+        Column {
+            Row {
+                Button(
+                    onClick = {
+                        chosenScreen = ChosenScreen.INTEGRATING_SCREEN
+                    }
+                ) {
+                    Text("Вставка")
                 }
-                writer.write("\n")
+                Button(
+                    onClick = {
+                        chosenScreen = ChosenScreen.EXTRACTING_SCREEN
+                    }
+                ) {
+                    Text("Извлечение")
+                }
+            }
+            if (chosenScreen == ChosenScreen.INTEGRATING_SCREEN) {
+                IntegratingScreen(window)
+            } else {
+                ExtractingScreen(window)
             }
         }
     }
+}
 
-    val dataFile = File("src/main/kotlin/mikhail/shell/stego/task3/data.txt")
-    val dataString = dataFile.bufferedReader().use { it.readLines().joinToString("") }
-    val byteData = dataString.toByteArray(Charsets.UTF_8)
-
-    val decomposedBits = byteData.decompose()
-
-    File(projectPath, "decomposedBits.txt").printWriter().use { writer ->
-        decomposedBits.forEach { bitPair ->
-            writer.write("[${bitPair[0]}, ${bitPair[1]}], ")
+@Composable
+fun IntegratingScreen(
+    parent: Frame
+) {
+    var data by remember { mutableStateOf("") }
+    var inputFilePath by remember { mutableStateOf(null as String?) }
+    var outputFilePath by remember { mutableStateOf(null as String?) }
+    Column {
+        TextField(
+            value = data,
+            onValueChange = {
+                data = it
+            }
+        )
+        Button(
+            onClick = {
+                inputFilePath = openFile(parent)
+            }
+        ) {
+            Text("Выбрать файл")
         }
-    }
-
-    val outputImage = inputImage.insertData(byteData)
-
-    File(projectPath, "outputBits.txt").printWriter().use { writer ->
-        for (x in 0..<outputImage.width) {
-            for (y in 0..<outputImage.height) {
-                val pixel = outputImage.getRGB(x, y)
-                val blueComponent = pixel.B
-                for (i in 0..7) {
-                    writer.write(blueComponent.getBit(i).toString())
+        Button(
+            onClick = {
+                val parentPath = inputFilePath?.substringBeforeLast("/")
+                val inputFileName = inputFilePath?.substringAfterLast("/")
+                val rawFilePath = inputFileName?.substringBeforeLast(".")
+                val extension = inputFileName?.substringAfterLast(".")
+                outputFilePath = "$rawFilePath (с данными).$extension"
+                if (inputFilePath != null) {
+                    insertData(inputFilePath!!, data, outputFilePath!!)
                 }
-                writer.write("\n")
+            }
+        ) {
+            Text("Вставить данные")
+        }
+        Row {
+            if (inputFilePath != null) {
+                Image(
+                    modifier = Modifier.width(300.dp),
+                    bitmap = ImageIO.read(File(inputFilePath!!)).toComposeImageBitmap(),
+                    contentDescription = null
+                )
+            }
+            if (outputFilePath != null) {
+                Image(
+                    modifier = Modifier.width(300.dp),
+                    bitmap = ImageIO.read(File(outputFilePath!!)).toComposeImageBitmap(),
+                    contentDescription = null
+                )
             }
         }
     }
-    val outputFile = File(parentPath, "2.$extension")
-    ImageIO.write(outputImage, extension, outputFile)
+}
 
-    val extractedData = ImageIO.read(outputFile).extractData()
-    val extractedString = extractedData.decodeToString()
-    File(projectPath, "extractedData.txt").printWriter(Charsets.UTF_8).use {
-        it.println(extractedString)
+fun insertData(inputImage: String, data: String, outputImage: String) {
+    val bufferedInputImage = ImageIO.read(File(inputImage))
+    val dataBytes = data.toByteArray()
+    val bufferedOutputImage = bufferedInputImage.insertData(dataBytes)
+    val extension = outputImage.substringAfterLast(".")
+    ImageIO.write(bufferedOutputImage, extension, File(outputImage))
+}
+
+fun openFile(
+    parent: Frame,
+    title: String = "Выберите файл"
+): String {
+    val dialog = FileDialog(parent, title, FileDialog.LOAD)
+    dialog.isVisible = true
+    return "${dialog.directory}${dialog.file}"
+}
+
+@Composable
+fun ExtractingScreen(parent: Frame) {
+    var filePath by remember { mutableStateOf(null as String?) }
+    var result by remember { mutableStateOf<String?>(null) }
+    Column {
+        Button(
+            onClick = {
+                filePath = openFile(parent)
+            }
+        ) {
+            Text("Выбрать файл")
+        }
+        Button(
+            onClick = {
+                filePath?.let {
+                    result = extractData(it)
+                }
+            }
+        ) {
+            Text("Извлечь данные")
+        }
+        if (result != null) {
+            Text(result!!)
+        }
     }
+}
+
+fun extractData(image: String): String {
+    val bufferedImage = ImageIO.read(File(image))
+    return bufferedImage.extractData().decodeToString()
 }
