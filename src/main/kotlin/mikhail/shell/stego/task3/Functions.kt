@@ -2,8 +2,6 @@ package mikhail.shell.stego.task3
 
 import java.awt.image.BufferedImage
 
-// Все биты внутри каждого байта обрабатываются справа налево
-
 // Преобразует массив из байтов в массив из пар битов
 fun ByteArray.decompose(): Array<Array<Int>> {
     val totalPairs = this.size * 8 / 2
@@ -48,11 +46,6 @@ fun Array<Int>.unite(): Int {
         result = (result shl 1) or bit
     }
     return result
-}
-
-// Задаю оператор для индекса по числу
-operator fun Int.get(index: Int): Int {
-    return (this shr (3 - index)) and 1
 }
 
 fun BufferedImage.insertData(data: Array<Array<Int>>): BufferedImage {
@@ -101,6 +94,39 @@ fun BufferedImage.insertData(data: Array<Array<Int>>): BufferedImage {
     return this
 }
 
+// Задаю оператор для индекса по числу
+operator fun Int.get(index: Int): Int {
+    return (this shr (7 - index)) and 1
+}
+
+fun BufferedImage.extractData(): ByteArray {
+    val bits = mutableListOf<Int>()
+    for (x in 0..<width) {
+        for (y in 0..<height) {
+            val pixel = getRGB(x, y)
+            val blue = pixel.B
+            val Bl = blue[5]
+            if (Bl == 1) {
+                bits.addAll(listOf(blue[0], blue[1]))
+            }
+            val Bm = blue[6]
+            if (Bm == 1) {
+                bits.addAll(listOf(blue[1], blue[2]))
+            }
+            val Br = blue[7]
+            if (Br == 1) {
+                bits.addAll(listOf(blue[2], blue[3]))
+            }
+        }
+    }
+    return bits.compose()
+}
+
+fun List<Int>.compose(): ByteArray {
+    return ByteArray(this.size / 8) { i ->
+        this.subList(i * 8, (i + 1) * 8).toTypedArray().unite().toByte()
+    }
+}
 
 fun Int.getBit(n: Int): Int {
     return (this shr (7 - n)) and 1

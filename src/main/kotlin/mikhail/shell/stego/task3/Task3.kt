@@ -8,7 +8,8 @@ fun main(args: Array<String>) {
     val parentPath = "C:/Users/Mikhail_Shell/Desktop/"
     val projectPath = "src/main/kotlin/mikhail/shell/stego/task3/"
 
-    val inputFile = File(parentPath, "1.jpg")
+    val inputFile = File(parentPath, "1.bmp")
+    val extension = inputFile.extension
     val inputImage = ImageIO.read(inputFile)
 
     File(projectPath, "inputBits.txt").printWriter().use { writer ->
@@ -26,7 +27,7 @@ fun main(args: Array<String>) {
 
     val dataFile = File("src/main/kotlin/mikhail/shell/stego/task3/data.txt")
     val dataString = dataFile.bufferedReader().use { it.readLines().joinToString("") }
-    val dataBytes = dataString.toByteArray()
+    val dataBytes = dataString.toByteArray(Charsets.UTF_8)
 
     val decomposedBits = dataBytes.decompose()
 
@@ -50,5 +51,12 @@ fun main(args: Array<String>) {
             }
         }
     }
-    ImageIO.write(outputImage, "jpg", File(parentPath, "2.jpg"))
+    val outputFile = File(parentPath, "2.$extension")
+    ImageIO.write(outputImage, extension, outputFile)
+
+    val extractedData = ImageIO.read(outputFile).extractData()
+    val extractedString = extractedData.decodeToString()
+    File(projectPath, "extractedData.txt").printWriter(Charsets.UTF_8).use {
+        it.println(extractedString)
+    }
 }
