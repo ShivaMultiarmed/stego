@@ -19,6 +19,7 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
     implementation("org.openjfx:javafx:17") // Only if using JavaFX
+    implementation("org.apache.tika:tika-core:2.9.1")
     implementation(compose.desktop.currentOs) // Required for Compose Multiplatform
 }
 
