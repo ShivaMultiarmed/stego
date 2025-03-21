@@ -1,89 +1,57 @@
 package mikhail.shell.stego.task4
 
-import org.apache.tika.metadata.Metadata
-import org.apache.tika.parser.AutoDetectParser
-import org.apache.tika.sax.BodyContentHandler
-import java.io.File
-import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
+import java.awt.image.DataBufferByte
 
-val File.metaData: Metadata
-    get() {
-        val metadata = Metadata()
-        val parser = AutoDetectParser()
-        inputStream().use {
-            parser.parse(it, BodyContentHandler(), metadata)
-        }
-        return metadata
-    }
 
-val File.metaDataLength: Long
-    get() {
-        return metaData.names().sumOf { it.length.toLong() + (metaData.get(it)?.length?.toLong() ?: 0L) }
-    }
-
-val File.contentLength: Long
-    get() = length() - metaDataLength
-
-val File.dimensions: Pair<Int, Int>
-    get() {
-        val bufferedImage = ImageIO.read(this)
-        return bufferedImage.width to bufferedImage.height
-    }
-
-fun File.interpolate(K: Int = 2): File {
-    val width = dimensions.first
-    val height = dimensions.second
-    val metadataLength = metaDataLength
-    var metadataPassed = false
-    val initialBytes = Array(height) { Array(width) { 0 } }
-    inputStream().use {  input ->
-        var byteReadCount = 0
-        var readByte: Int
-        while (input.read().also { readByte = it } != -1) {
-            if (byteReadCount >= metadataLength && !metadataPassed) {
-                byteReadCount -= metadataLength.toInt()
-                metadataPassed = true
-            }
-            if (metadataPassed) {
-                val (x, y) = (byteReadCount / width) to (byteReadCount % width)
-                initialBytes[y][x] = readByte
-            }
-            byteReadCount++
+fun BufferedImage.interpolate(): BufferedImage {
+    val K = 2
+    val inputBuffer = raster.dataBuffer as DataBufferByte
+    val bytes = inputBuffer.data
+    val initialBytes = Array(height) {  i ->
+        Array(width) { j ->
+            bytes[i * width + j].toInt() and 0xFF
         }
     }
     val newWidth = width * K
     val newHeight = height * K
     val newBytes = Array(newHeight) { Array(newWidth) { 0 } }
-    for (m in 0..<height) {
-        for (n in 0..<width) {
-            newBytes[m * K][n * K] = initialBytes[m][n]
-            if (n in 1..width - 2) {
-                val left = initialBytes[m][n - 1]
-                val right = initialBytes[m][n + 1]
-                for (k in 1 until K) {
-                    newBytes[m * K][n * K + k] = (left + right) / 2
+    for (i in 0 until newHeight) {
+        for (j in 0 until newWidth) {
+            val m = i / K
+            val n = j / K
+            if (i % K == 0 && j % K == 0) {
+                newBytes[i][j] = initialBytes[m][n]
+            } else if (i % K == 0) {
+                newBytes[i][j] = when {
+                    (n in 1..width - 2) -> (initialBytes[m][n - 1] + initialBytes[m][n + 1]) / K
+                    (n >= 1) -> initialBytes[m][n - 1]
+                    (n <= width -2) -> initialBytes[m][n + 1]
+                    else -> 0
                 }
-            }
-            if (m in 1..height - 2) {
-                val top  = initialBytes[m - 1][n]
-                val bottom = initialBytes[m + 1][n]
-                for (k in 1 until K) {
-                    newBytes[m * K + k][n * K] = (top + bottom) / 2
+            } else if (j % K == 0) {
+                newBytes[i][j] = when {
+                    (m in 1..height - 2) -> (initialBytes[m - 1][n] + initialBytes[m + 1][n]) / K
+                    (m >= 1) -> initialBytes[m - 1][n]
+                    (m <= width - 2) -> initialBytes[m + 1][n]
+                    else -> 0
                 }
+            } else {
+                var sum = newBytes[i - 1][j] + newBytes[i][j - 1]
+                var count = 2
+                if (m > 0 && n > 0) {
+                    sum += initialBytes[m - 1][n - 1]
+                    count++
+                }
+                newBytes[i][j] = sum / count
             }
         }
     }
-    val outputFile = File(this.parentFile, "$nameWithoutExtension-interpolated.$extension")
-    outputFile.outputStream().use { output ->
-        inputStream().use { input ->
-            output.write(input.readNBytes(metadataLength.toInt())) // копируем метаданные
-        }
-        for (m in 0..<height) {
-            for (n in 0..<width) {
-                val byte = newBytes[m][n]
-                output.write(byte)
-            }
-        }
+    val output = BufferedImage(newWidth, newHeight, TYPE_BYTE_GRAY)
+    val outputBuffer = output.raster.dataBuffer as DataBufferByte
+    outputBuffer.data.forEachIndexed { i, _ ->
+        outputBuffer.data[i] = newBytes[i / newWidth][i % newWidth].toByte()
     }
-    return outputFile
+    return output
 }
