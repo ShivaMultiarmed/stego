@@ -6,8 +6,8 @@ import javax.imageio.ImageIO
 fun main() {
     val inputFile = File("C:/Users/Mikhail_Shell/Desktop/121.bmp")
     val inputImg = ImageIO.read(inputFile)
-    val outputImg = inputImg.interpolate()
-    val outputFile = File(inputFile.parentFile, "${inputFile.nameWithoutExtension}-interpolated.${inputFile.extension}")
+    val interpolatedImg = inputImg.interpolate()
+    val outputImg = interpolatedImg.insertData("Some string".toByteArray())
+    val outputFile = File(inputFile.parentFile, "${inputFile.nameWithoutExtension}-output.${inputFile.extension}")
     ImageIO.write(outputImg, inputFile.extension, outputFile)
-    outputImg.insertData("Some string".toByteArray())
 }
