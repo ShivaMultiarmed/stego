@@ -16,6 +16,12 @@ fun ByteArray.getBit(bitNumber: Int): Byte {
     return this[byteNumber][specificBitNumber]
 }
 
+fun List<Byte>.compose(): ByteArray {
+    return ByteArray(this.size / 8) { i ->
+        this.subList(i * 8, (i + 1) * 8).toTypedArray().unite()
+    }
+}
+
 fun ByteArray.decompose(): ByteArray {
     return ByteArray(this.size * 8) { i ->
         this.getBit(i)
@@ -30,15 +36,42 @@ fun Array<Byte>.unite(): Byte {
     return result.toByte()
 }
 
+fun ByteArray.arrange(width: Int, height: Int): Array<Array<Int>> {
+    return Array(height) { i ->
+        Array(width) { j ->
+            this[i * width + j].toInt() and 0xFF
+        }
+    }
+}
+
+fun Array<Array<Int>>.chunk(): Array<Array<Array<Array<Int>>>> {
+    return Array(this.size / 2) { i ->
+        Array(this[0].size / 2) { j ->
+            val m00 = this[2 * i][2 * j]
+            val m01 = this[2 * i][2 * j + 1]
+            val m10 = this[2 * i + 1][2 * j]
+            val m11 = this[2 * i + 1][2 * j + 1]
+            arrayOf(
+                arrayOf(m00, m01),
+                arrayOf(m10, m11)
+            )
+        }
+    }
+}
+
+fun Int.toByteArray(): ByteArray {
+    return ByteArray(4) { i ->
+        (this shr ((3 - i) * 8) and 0xFF).toByte()
+    }
+}
+
+fun Int.getN() = if (this != 0) log2(abs(this).toFloat()).toInt() else 0
+
 fun BufferedImage.interpolate(): BufferedImage {
     val K = 2
     val inputBuffer = raster.dataBuffer as DataBufferByte
     val bytes = inputBuffer.data
-    val initialBytes = Array(height) { i ->
-        Array(width) { j ->
-            bytes[i * width + j].toInt() and 0xFF
-        }
-    }
+    val initialBytes = bytes.arrange(width, height)
     val newWidth = width * K
     val newHeight = height * K
     val newBytes = Array(newHeight) { Array(newWidth) { 0 } }
@@ -82,26 +115,12 @@ fun BufferedImage.interpolate(): BufferedImage {
 }
 
 fun BufferedImage.insertData(data: ByteArray): BufferedImage {
+    val dataLength = data.size.toByteArray()
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
-    val formattedInput = Array(height) { row ->
-        Array(width) { col ->
-            inputBuffer[row * width + col].toInt() and 0xFF
-        }
-    }
+    val formattedInput = inputBuffer.arrange(width, height)
     var bitNum = 0
-    val bits = data.decompose().toTypedArray()
-    val blocks = Array(height / 2) { i ->
-        Array(width / 2) { j ->
-            val m00 = formattedInput[2 * i][2 * j]
-            val m01 = formattedInput[2 * i][2 * j + 1]
-            val m10 = formattedInput[2 * i + 1][2 * j]
-            val m11 = formattedInput[2 * i + 1][2 * j + 1]
-            arrayOf(
-                arrayOf(m00, m01),
-                arrayOf(m10, m11)
-            )
-        }
-    }
+    val bits = (dataLength + data).decompose().toTypedArray()
+    val blocks = formattedInput.chunk()
     for (i in blocks.indices) {
         for (j in blocks[0].indices) {
             val block = blocks[i][j]
@@ -144,28 +163,35 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
     return outputImage
 }
 
-inline fun <reified T> Array<Array<T>>.flatten(): Array<T> {
-    val rows = this.size
-    val cols = this[0].size
-    return Array( rows * cols) {
-        this[it / cols][it % cols]
+fun BufferedImage.extractData(): ByteArray {
+    val K = 2
+    val bits = mutableListOf<Byte>()
+    val arrangedInput = (raster.dataBuffer as DataBufferByte).data
+        .arrange(width, height)
+    var bitNum = 0
+    var dataLength: Int? = null
+    val blocks = arrangedInput.chunk()
+    for (i in 0 until blocks.size - 1) {
+        for (j in 0 until blocks[0].size - 1) {
+            val block = blocks[i][j]
+            val rightBlock = blocks[i][j + 1]
+            val bottomBlock = blocks[i + 1][j]
+            val b = arrayOf(
+                block[0][1] - (block[0][0] + rightBlock[0][0]) / K,
+                block[1][0] - (block[0][0] + bottomBlock[0][0]) / K,
+                block[0][0] - (K * block[0][0] + bottomBlock[0][0] / K + rightBlock[0][0] / K) / (K + 1)
+            )
+            if (dataLength == null && bitNum >= 8 * 4) {
+                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
+                bits.subList(0, dataLength).clear()
+                bitNum -= dataLength
+            }
+            b.forEach {
+                val bitPart = Integer.toBinaryString(it).asSequence().toList().map { it.digitToInt().toByte() }
+                bitNum += bitPart.size
+                bits.addAll(bitPart)
+            }
+        }
     }
+    return bits.compose()
 }
-
-inline fun <reified A, reified B> Array<Array<A>>.transform(transformation: (x: A) -> B): Array<Array<B>> {
-    return this.map { row ->
-        row.map { initial ->
-            transformation(initial)
-        }.toTypedArray()
-    }.toTypedArray()
-}
-
-inline fun <reified A, reified B> Array<Array<A>>.transformIndexed(transformation: (i: Int, j: Int, x: A) -> B): Array<Array<B>> {
-    return this.mapIndexed { i, row ->
-        row.mapIndexed { j, initial ->
-            transformation(i, j, initial)
-        }.toTypedArray()
-    }.toTypedArray()
-}
-
-fun Int.getN() = if (this != 0) log2(abs(this).toFloat()).toInt() else 0
