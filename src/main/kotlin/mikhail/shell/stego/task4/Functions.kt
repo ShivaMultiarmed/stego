@@ -3,6 +3,7 @@ package mikhail.shell.stego.task4
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
+import java.io.File
 import kotlin.math.abs
 import kotlin.math.log2
 
@@ -114,13 +115,20 @@ fun BufferedImage.interpolate(): BufferedImage {
     return output
 }
 
+
+
 fun BufferedImage.insertData(data: ByteArray): BufferedImage {
+    val resourcesPath = "src/main/resources/"
     val dataLength = data.size.toByteArray()
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
     val formattedInput = inputBuffer.arrange(width, height)
     var bitNum = 0
     val bits = (dataLength + data).decompose().toTypedArray()
     val blocks = formattedInput.chunk()
+    File(resourcesPath,"before.txt").printWriter().use {
+        val content = blocks.print()
+        it.print(content)
+    }
     for (i in blocks.indices) {
         for (j in blocks[0].indices) {
             val block = blocks[i][j]
@@ -141,8 +149,14 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
                     }
                 }
             }
+            block
         }
     }
+    File(resourcesPath,"after.txt").printWriter().use {
+        val content = blocks.print()
+        it.print(content)
+    }
+
     val newImageData = Array(height) { Array(width) { 0 } }
     for (i in 0 until height / 2) {
         for (j in 0 until width / 2) {
@@ -176,22 +190,63 @@ fun BufferedImage.extractData(): ByteArray {
             val block = blocks[i][j]
             val rightBlock = blocks[i][j + 1]
             val bottomBlock = blocks[i + 1][j]
-            val b = arrayOf(
-                block[0][1] - (block[0][0] + rightBlock[0][0]) / K,
-                block[1][0] - (block[0][0] + bottomBlock[0][0]) / K,
-                block[0][0] - (K * block[0][0] + bottomBlock[0][0] / K + rightBlock[0][0] / K) / (K + 1)
-            )
-            if (dataLength == null && bitNum >= 8 * 4) {
-                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
-                bits.subList(0, dataLength).clear()
-                bitNum -= dataLength
-            }
-            b.forEach {
-                val bitPart = Integer.toBinaryString(it).asSequence().toList().map { it.digitToInt().toByte() }
-                bitNum += bitPart.size
-                bits.addAll(bitPart)
+//            if (dataLength == null && bitNum >= 8 * 4) {
+//                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
+//                bits.subList(0, dataLength).clear()
+//                bitNum -= dataLength
+//            }
+            for (r in 0..1) {
+                for (c in 0..1) {
+                    if (r == 0 && c == 0) {
+                        continue
+                    }
+                    val b = when {
+                        r == 1 && c == 1 -> {
+                            (block[0][0] - (K * block[0][0] + bottomBlock[0][0].toFloat() / K + rightBlock[0][0].toFloat() / K) / (K + 1)).toInt()
+                        }
+                        r == 0 -> {
+                            (block[0][1] - (block[0][0] + rightBlock[0][0]).toFloat() / K).toInt()
+                        }
+                        else -> { // c == 0
+                            (block[1][0] - (block[0][0] + bottomBlock[0][0]).toFloat() / K).toInt()
+                        }
+                    }.let { abs(it) }
+                    val bitPart = Integer.toBinaryString(b).asSequence().toList().map { it.digitToInt().toByte() }
+                    bitNum += bitPart.size
+                    bits.addAll(bitPart)
+                }
             }
         }
     }
     return bits.compose()
+}
+
+
+fun Array<Array<Array<Array<Int>>>>.print(): String {
+    val builder = StringBuilder()
+    for (i in this.indices) {
+        for (j in this[i].indices) {
+            builder.append(j + 1).append("\t\t\t")
+        }
+        builder.append("\n")
+        for (j in this[i].indices) {
+            val block = this[i][j]
+            builder.append(block[0][0].toString() + "\t")
+            builder.append(block[0][1].toString() + "\t")
+            builder.append("|\t")
+        }
+        builder.append("\n")
+        for (j in this[i].indices) {
+            val block = this[i][j]
+            builder.append(block[1][0].toString() + "\t")
+            builder.append(block[1][1].toString() + "\t")
+            builder.append("|\t")
+        }
+        builder.append("\n")
+        for (j in this[i].indices) {
+            builder.append("----")
+        }
+        builder.append("\n")
+    }
+    return builder.toString()
 }
