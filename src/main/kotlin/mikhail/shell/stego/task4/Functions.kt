@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.log2
 
 operator fun Byte.get(index: Int): Byte {
@@ -37,15 +38,15 @@ fun Array<Byte>.unite(): Byte {
     return result.toByte()
 }
 
-fun ByteArray.arrange(width: Int, height: Int): Array<Array<Int>> {
+fun ByteArray.arrange(width: Int, height: Int): Array<Array<Float>> {
     return Array(height) { i ->
         Array(width) { j ->
-            this[i * width + j].toInt() and 0xFF
+            (this[i * width + j].toInt() and 0xFF).toFloat()
         }
     }
 }
 
-fun Array<Array<Int>>.chunk(): Array<Array<Array<Array<Int>>>> {
+fun Array<Array<Float>>.chunk(): Array<Array<Array<Array<Float>>>> {
     return Array(this.size / 2) { i ->
         Array(this[0].size / 2) { j ->
             val m00 = this[2 * i][2 * j]
@@ -66,7 +67,7 @@ fun Int.toByteArray(): ByteArray {
     }
 }
 
-fun Int.getN() = if (this != 0) log2(abs(this).toFloat()).toInt() else 0
+fun Float.getN() = if (this != 0f) log2(abs(this)).toInt() else 0
 
 fun BufferedImage.interpolate(): BufferedImage {
     val K = 2
@@ -75,42 +76,59 @@ fun BufferedImage.interpolate(): BufferedImage {
     val initialBytes = bytes.arrange(width, height)
     val newWidth = width * K
     val newHeight = height * K
-    val newBytes = Array(newHeight) { Array(newWidth) { 0 } }
-    for (i in 0 until newHeight) {
-        for (j in 0 until newWidth) {
-            val m = i / K
-            val n = j / K
-            if (i % K == 0 && j % K == 0) {
-                newBytes[i][j] = initialBytes[m][n]
-            } else if (i % K == 0) {
-                newBytes[i][j] = when {
-                    (n in 1..width - 2) -> (initialBytes[m][n - 1] + initialBytes[m][n + 1]) / K
-                    (n >= 1) -> initialBytes[m][n - 1]
-                    (n <= width - 2) -> initialBytes[m][n + 1]
-                    else -> 0
-                }
-            } else if (j % K == 0) {
-                newBytes[i][j] = when {
-                    (m in 1..height - 2) -> (initialBytes[m - 1][n] + initialBytes[m + 1][n]) / K
-                    (m >= 1) -> initialBytes[m - 1][n]
-                    (m <= width - 2) -> initialBytes[m + 1][n]
-                    else -> 0
-                }
+    val newBytes = Array(newHeight) { Array(newWidth) { 0f } }
+    for (m in 0 until height) {
+        for (n in 0 until width) {
+            newBytes[K * m][K * n] = initialBytes[m][n]
+        }
+    }
+    for (m in 0 until height) {
+        for (n in 0 until width) {
+            val left = initialBytes[m][n]
+            if (n < width - 1) {
+                val right = initialBytes[m][n + 1]
+                newBytes[m * K][n * K + 1] = (left + right) / 2
             } else {
-                var sum = newBytes[i - 1][j] + newBytes[i][j - 1]
-                var count = 2
-                if (m > 0 && n > 0) {
-                    sum += initialBytes[m - 1][n - 1]
-                    count++
-                }
-                newBytes[i][j] = sum / count
+                newBytes[m * K][n * K + 1] = left
             }
+        }
+    }
+    for (m in 0 until height) {
+        for (n in 0 until width) {
+            val top = initialBytes[m][n]
+            if (m < height - 1) {
+                val bottom = initialBytes[m + 1][n]
+                newBytes[m * K + 1][n * K] = (top + bottom) / 2
+            } else {
+                newBytes[m * K + 1][n * K] = top
+            }
+        }
+    }
+    for (m in 0 until height) {
+        for (n in 0 until width) {
+            val topLeft = initialBytes[m][n]
+            var sum = topLeft
+            var count = 1
+            if (m < height - 1) {
+                val left = newBytes[K * m][K * n + 1]
+                sum += left
+                count++
+            }
+            if (m < width - 1) {
+                val top = newBytes[K * m + 1][K * n]
+                sum += top
+                count++
+            }
+            newBytes[m * K + 1][n * K + 1] = sum / count
         }
     }
     val output = BufferedImage(newWidth, newHeight, TYPE_BYTE_GRAY)
     val outputBuffer = output.raster.dataBuffer as DataBufferByte
     outputBuffer.data.forEachIndexed { i, _ ->
-        outputBuffer.data[i] = newBytes[i / newWidth][i % newWidth].toByte()
+        outputBuffer.data[i] = floor(newBytes[i / newWidth][i % newWidth])
+            .toInt()
+            .coerceIn(0, 255)
+            .toByte()
     }
     return output
 }
@@ -157,7 +175,7 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
         it.print(content)
     }
 
-    val newImageData = Array(height) { Array(width) { 0 } }
+    val newImageData = Array(height) { Array(width) { 0f } }
     for (i in 0 until height / 2) {
         for (j in 0 until width / 2) {
             val block = blocks[i][j]
@@ -171,7 +189,10 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
     val outputBuffer = (outputImage.raster.dataBuffer as DataBufferByte).data
     for (row in 0 until height) {
         for (col in 0 until width) {
-            outputBuffer[row * width + col] = newImageData[row][col].toByte()
+            outputBuffer[row * width + col] = floor(newImageData[row][col])
+                .toInt()
+                .coerceIn(0,255)
+                .toByte()
         }
     }
     return outputImage
@@ -202,15 +223,18 @@ fun BufferedImage.extractData(): ByteArray {
                     }
                     val b = when {
                         r == 1 && c == 1 -> {
-                            (block[0][0] - (K * block[0][0] + bottomBlock[0][0].toFloat() / K + rightBlock[0][0].toFloat() / K) / (K + 1)).toInt()
+                            (block[0][0] - (K * block[0][0] + (bottomBlock[0][0] + rightBlock[0][0]) / K.toFloat()) / (K + 1)).toInt()
                         }
                         r == 0 -> {
-                            (block[0][1] - (block[0][0] + rightBlock[0][0]).toFloat() / K).toInt()
+                            (block[0][1] - (block[0][0] + rightBlock[0][0]) / K)
                         }
                         else -> { // c == 0
-                            (block[1][0] - (block[0][0] + bottomBlock[0][0]).toFloat() / K).toInt()
+                            (block[1][0] - (block[0][0] + bottomBlock[0][0]) / K)
                         }
-                    }.let { abs(it) }
+                    }.let { abs(it.toInt()) }
+                    if (b == 0 && block[r][c] == block[0][0]) {
+                        continue
+                    }
                     val bitPart = Integer.toBinaryString(b).asSequence().toList().map { it.digitToInt().toByte() }
                     bitNum += bitPart.size
                     bits.addAll(bitPart)
@@ -222,7 +246,7 @@ fun BufferedImage.extractData(): ByteArray {
 }
 
 
-fun Array<Array<Array<Array<Int>>>>.print(): String {
+fun Array<Array<Array<Array<Float>>>>.print(): String {
     val builder = StringBuilder()
     for (i in this.indices) {
         for (j in this[i].indices) {
