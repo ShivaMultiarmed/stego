@@ -200,16 +200,21 @@ fun BufferedImage.extractData(): ByteArray {
     var bitNum = 0
     var dataLength: Int? = null
     val blocks = arrangedInput.chunk()
-    for (i in 0 until blocks.size - 1) {
+    outer@ for (i in 0 until blocks.size - 1) {
         for (j in 0 until blocks[0].size - 1) {
             val block = blocks[i][j]
             val right = blocks[i][j + 1]
             val bottom = blocks[i + 1][j]
-//            if (dataLength == null && bitNum >= 8 * 4) {
-//                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
-//                bits.subList(0, dataLength).clear()
-//                bitNum -= dataLength
-//            }
+            if (dataLength == null && bitNum >= 8 * 4) {
+                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
+                bits.subList(0, 4 * 8).clear()
+                bitNum -= dataLength * 8
+            }
+            if (dataLength != null) {
+                if (bitNum >= dataLength * 8) {
+                    break@outer
+                }
+            }
             for (r in 0..1) {
                 for (c in 0..1) {
                     if (r == 0 && c == 0) {
@@ -229,20 +234,14 @@ fun BufferedImage.extractData(): ByteArray {
                     val bitPart = Integer.toBinaryString(b)
                         .asSequence().toList()
                         .map { it.digitToInt().toByte() }
-                        .let {
-                            if (it.size < n) {
-                                List(n - it.size) { 0.toByte() } + it
-                            } else {
-                                it
-                            }
-                        }
+                        .let { List(n - it.size) { 0.toByte() } + it }
                     bitNum += bitPart.size
                     bits.addAll(bitPart)
                 }
             }
         }
     }
-    return bits.compose()
+    return bits.subList(0, dataLength!! * 8).compose()
 }
 
 
