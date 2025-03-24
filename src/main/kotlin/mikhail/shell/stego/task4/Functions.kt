@@ -106,20 +106,12 @@ fun BufferedImage.interpolate(): BufferedImage {
     }
     for (m in 0 until height) {
         for (n in 0 until width) {
-            val topLeft = initialBytes[m][n]
-            var sum = topLeft
-            var count = 1
-            if (m < height - 1) {
-                val left = newBytes[K * m][K * n + 1]
-                sum += left
-                count++
-            }
-            if (m < width - 1) {
-                val top = newBytes[K * m + 1][K * n]
-                sum += top
-                count++
-            }
-            newBytes[m * K + 1][n * K + 1] = sum / count
+            newBytes[m * K + 1][n * K + 1] =
+                (
+                        initialBytes[m][n]
+                                + newBytes[K * m][K * n + 1]
+                                + newBytes[K * m + 1][K * n]
+                        ) / 3
         }
     }
     val output = BufferedImage(newWidth, newHeight, TYPE_BYTE_GRAY)
