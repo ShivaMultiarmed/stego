@@ -128,7 +128,7 @@ fun BufferedImage.interpolate(): BufferedImage {
 
 
 fun BufferedImage.insertData(data: ByteArray): BufferedImage {
-    val resourcesPath = "src/main/resources/"
+    val resourcesPath = "src/main/kotlin/mikhail/shell/stego/task4/"
     val dataLength = data.size.toByteArray()
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
     val formattedInput = inputBuffer.arrange(width, height)
