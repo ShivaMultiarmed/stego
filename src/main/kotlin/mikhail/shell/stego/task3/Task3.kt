@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberTrayState
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
