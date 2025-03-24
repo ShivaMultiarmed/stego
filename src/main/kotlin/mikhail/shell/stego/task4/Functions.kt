@@ -4,9 +4,7 @@ import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
 import java.io.File
-import kotlin.math.abs
-import kotlin.math.floor
-import kotlin.math.log2
+import kotlin.math.*
 
 operator fun Byte.get(index: Int): Byte {
     return ((this.toInt() shr (7 - index)) and 1).toByte()
@@ -260,4 +258,26 @@ fun Array<Array<Array<Array<Float>>>>.print(): String {
         builder.append("\n")
     }
     return builder.toString()
+}
+
+fun evaluateMSE(
+    image1: BufferedImage,
+    image2: BufferedImage
+): Float {
+    val input1 = (image1.raster.dataBuffer as DataBufferByte).data
+    val input2 = (image2.raster.dataBuffer as DataBufferByte).data
+
+    var mse = 0f
+
+    for (i in input1.indices) {
+        mse += (input1[i] - input2[i]).toDouble().pow(2.0).toFloat()
+    }
+
+    mse /= input1.size
+
+    return mse
+}
+
+fun evaluatePSNR(max: Float, mse: Float): Float {
+    return 10 * log10(max.pow(2) / mse)
 }

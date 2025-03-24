@@ -94,6 +94,8 @@ fun IntegratingScreen(
             outputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() }
         }
         var data by remember { mutableStateOf("") }
+        var mse by remember { mutableStateOf(null as Float?) }
+        val psnr = remember (mse) { mse?.let { evaluatePSNR(255f, it) } }
         Button(
             onClick = {
                 val selectedFile = openFile(parent, if (inputPath == null) "Выберите изображение" else "Измените изображение")
@@ -122,12 +124,19 @@ fun IntegratingScreen(
                     val outputFile = File(inputFile.parentFile, inputFile.nameWithoutExtension + "-output." + inputFile.extension)
                     ImageIO.write(outputImage, outputFile.extension, outputFile)
                     outputPath = outputFile.path
+                    mse = evaluateMSE(interpolatedImage, outputImage)
                 }
             }
         ) {
             Text(
                 text = "Внедрить данные"
             )
+        }
+        if (mse != null) {
+            Column {
+                Text("MSE = $mse")
+                Text("PSNR = $psnr")
+            }
         }
         Row {
             if (inputBitmap != null) {
