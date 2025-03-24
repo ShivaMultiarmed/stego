@@ -139,6 +139,7 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
         val content = blocks.print()
         it.print(content)
     }
+    val insertionsFileWriter = File(resourcesPath, "insertions.txt").printWriter()
     for (i in blocks.indices) {
         for (j in blocks[0].indices) {
             val block = blocks[i][j]
@@ -156,12 +157,13 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
                         val b = slice.unite().toInt()
                         bitNum += n
                         block[r][c] = block[r][c] + b
+                        insertionsFileWriter.print("coords: ($i; $j); position: ($r; $c); value: $b\n")
                     }
                 }
             }
-            block
         }
     }
+    insertionsFileWriter.close()
     File(resourcesPath,"after.txt").printWriter().use {
         val content = blocks.print()
         it.print(content)
@@ -201,8 +203,8 @@ fun BufferedImage.extractData(): ByteArray {
     for (i in 0 until blocks.size - 1) {
         for (j in 0 until blocks[0].size - 1) {
             val block = blocks[i][j]
-            val rightBlock = blocks[i][j + 1]
-            val bottomBlock = blocks[i + 1][j]
+            val right = blocks[i][j + 1]
+            val bottom = blocks[i + 1][j]
 //            if (dataLength == null && bitNum >= 8 * 4) {
 //                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
 //                bits.subList(0, dataLength).clear()
@@ -213,18 +215,15 @@ fun BufferedImage.extractData(): ByteArray {
                     if (r == 0 && c == 0) {
                         continue
                     }
-                    val b = when {
-                        r == 1 && c == 1 -> {
-                            (block[0][0] - (K * block[0][0] + (bottomBlock[0][0] + rightBlock[0][0]) / K.toFloat()) / (K + 1)).toInt()
-                        }
-                        r == 0 -> {
-                            (block[0][1] - (block[0][0] + rightBlock[0][0]) / K)
-                        }
-                        else -> { // c == 0
-                            (block[1][0] - (block[0][0] + bottomBlock[0][0]) / K)
-                        }
-                    }.let { abs(it.toInt()) }
-                    if (b == 0 && block[r][c] == block[0][0]) {
+                    val initialByte = when {
+                        r == 1 && c == 1 -> (K * block[0][0] + (bottom[0][0] + right[0][0]) / K.toFloat()) / (K + 1)
+                        r == 0 -> (block[0][0] + right[0][0]) / K
+                        else -> (block[0][0] + bottom[0][0]) / K
+                    }.let { floor(it) }
+                    val b = (block[r][c] - initialByte).toInt()
+                    val d = initialByte - block[0][0]
+                    val n = d.getN()
+                    if (n == 0) {
                         continue
                     }
                     val bitPart = Integer.toBinaryString(b).asSequence().toList().map { it.digitToInt().toByte() }
@@ -242,7 +241,7 @@ fun Array<Array<Array<Array<Float>>>>.print(): String {
     val builder = StringBuilder()
     for (i in this.indices) {
         for (j in this[i].indices) {
-            builder.append(j + 1).append("\t\t\t")
+            builder.append(j).append("\t\t\t\t\t")
         }
         builder.append("\n")
         for (j in this[i].indices) {
