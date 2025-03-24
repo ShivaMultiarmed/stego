@@ -108,6 +108,7 @@ tasks.create<Jar>("stego4") {
         include("mikhail/shell/stego/task4/**")
     }
     dependsOn(configurations.runtimeClasspath)
+    duplicatesStrategy = EXCLUDE
     from(
         {
             configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }

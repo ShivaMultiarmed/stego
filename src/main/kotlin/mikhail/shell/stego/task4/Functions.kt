@@ -128,18 +128,12 @@ fun BufferedImage.interpolate(): BufferedImage {
 
 
 fun BufferedImage.insertData(data: ByteArray): BufferedImage {
-    val resourcesPath = "src/main/kotlin/mikhail/shell/stego/task4/"
     val dataLength = data.size.toByteArray()
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
     val formattedInput = inputBuffer.arrange(width, height)
     var bitNum = 0
     val bits = (dataLength + data).decompose().toTypedArray()
     val blocks = formattedInput.chunk()
-    File(resourcesPath,"before.txt").printWriter().use {
-        val content = blocks.print()
-        it.print(content)
-    }
-    val insertionsFileWriter = File(resourcesPath, "insertions.txt").printWriter()
     for (i in blocks.indices) {
         for (j in blocks[0].indices) {
             val block = blocks[i][j]
@@ -157,16 +151,10 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
                         val b = slice.unite().toInt()
                         bitNum += n
                         block[r][c] = block[r][c] + b
-                        insertionsFileWriter.print("coords: ($i; $j); position: ($r; $c); value: $b\n")
                     }
                 }
             }
         }
-    }
-    insertionsFileWriter.close()
-    File(resourcesPath,"after.txt").printWriter().use {
-        val content = blocks.print()
-        it.print(content)
     }
 
     val newImageData = Array(height) { Array(width) { 0f } }
