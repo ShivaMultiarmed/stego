@@ -10,15 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import java.awt.FileDialog
 import java.awt.Frame
-import java.awt.Image
-import java.awt.image.BufferedImage
-import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
-import java.awt.image.DataBufferByte
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -54,7 +51,7 @@ fun App(
 ) {
     Box(
         modifier = Modifier
-            .size(600.dp, 600.dp)
+            .size(800.dp, 800.dp)
     ) {
         Column {
             Row {
@@ -138,17 +135,25 @@ fun IntegratingScreen(
                 Text("PSNR = $psnr")
             }
         }
-        Row {
+        Row(
+            modifier = Modifier.width(800.dp)
+        ) {
             if (inputBitmap != null) {
                 Image(
-                    modifier = Modifier,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .width(400.dp)
+                        .wrapContentHeight(),
                     bitmap = inputBitmap,
                     contentDescription = null
                 )
             }
             if (outputBitmap != null) {
                 Image(
-                    modifier = Modifier,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .width(400.dp)
+                        .wrapContentHeight(),
                     bitmap = outputBitmap,
                     contentDescription = null
                 )
