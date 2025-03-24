@@ -226,7 +226,16 @@ fun BufferedImage.extractData(): ByteArray {
                     if (n == 0) {
                         continue
                     }
-                    val bitPart = Integer.toBinaryString(b).asSequence().toList().map { it.digitToInt().toByte() }
+                    val bitPart = Integer.toBinaryString(b)
+                        .asSequence().toList()
+                        .map { it.digitToInt().toByte() }
+                        .let {
+                            if (it.size < n) {
+                                List(n - it.size) { 0.toByte() } + it
+                            } else {
+                                it
+                            }
+                        }
                     bitNum += bitPart.size
                     bits.addAll(bitPart)
                 }
