@@ -18,6 +18,8 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation(kotlin("stdlib-jdk8"))
+    implementation("org.apache.commons:commons-math3:3.6.1")
     implementation("org.openjfx:javafx:17") // Only if using JavaFX
     implementation("org.apache.tika:tika-core:2.9.1")
     implementation(compose.desktop.currentOs) // Required for Compose Multiplatform

@@ -25,12 +25,18 @@ package mikhail.shell.stego.task5;
 import java.awt.image.BufferedImage;
 import java.util.Vector;
 import java.util.Enumeration;
-import javax.imageio.ImageIO;
-import java.io.File;
-
 
 
 public class RSAnalysis extends PixelBenchmark {
+
+    private static RSAnalysis instance;
+
+    public static RSAnalysis getInstance() {
+        if (instance == null) {
+            instance = new RSAnalysis(4, 1);
+        }
+        return instance;
+    }
 
     //CONSTRUCTORS
 
@@ -44,8 +50,9 @@ public class RSAnalysis extends PixelBenchmark {
      * @param m The x mask size.
      * @param n The y mask size.
      */
-    public RSAnalysis(int m, int n){
+    private RSAnalysis(int m, int n){
         //two masks
+
         mMask = new int[2][m * n];
 
         //iterate through them and set alternating bits
