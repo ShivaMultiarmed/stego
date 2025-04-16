@@ -298,46 +298,63 @@ fun AumpScreen(
     window: Frame
 ) {
     Column {
-        var inputPath by remember { mutableStateOf(null as String?) }
-        val inputBitmap = remember(inputPath) { inputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() } }
-        var sp by remember { mutableStateOf(null as Double?) }
-        var triples by remember { mutableStateOf(null as Double?) }
-        var ws by remember { mutableStateOf(null as Double?) }
-        val resultMessage = remember(sp, triples, ws) {
-            if (sp != null && triples != null && ws != null) {
+        val inputPaths = remember { mutableStateListOf<String>() }
+        val inputBitmaps by derivedStateOf {
+            inputPaths.map {
+                ImageIO.read(File(it)).toComposeImageBitmap()
+            }
+        }
+        val sp = remember { mutableStateListOf<Double>() }
+        var triples = remember { mutableStateListOf<Double>() }
+        var ws = remember { mutableStateListOf<Double>() }
+        val resultMessages by derivedStateOf {
+            sp.indices.map { i ->
                 val stringBuilder = StringBuilder()
-                stringBuilder.append("sp = $sp\n")
-                stringBuilder.append("triples = $triples\n")
-                stringBuilder.append("ws = $ws\n")
-                if (sp!! >= 0.064875) {
-                    stringBuilder.append("Высокая вероятность, что встроены данные")
+                stringBuilder.append("sp = ${sp[i]}\n")
+                stringBuilder.append("triples = ${triples[i]}\n")
+                stringBuilder.append("ws = ${ws[i]}\n")
+                if (sp[i] >= 0.064875) {
+                    stringBuilder.append("Встроены данные")
                 } else {
-                    stringBuilder.append("Данных скорее всего нет")
+                    stringBuilder.append("Данных нет")
                 }
                 stringBuilder.toString()
-            } else null
+            }
         }
         Button(
             onClick = {
-                inputPath = openFile(window)
+                val selectedPaths = openFiles(window)
+                if (selectedPaths != null) {
+                    inputPaths.clear()
+                    selectedPaths.forEach(inputPaths::add)
+                }
             }
         ) {
-            Text("Выбрать файл")
+            Text("Выбрать файлы")
         }
-        inputBitmap?.let {
-            Image(
-                modifier = Modifier.width(300.dp),
-                bitmap = it,
-                contentDescription = null
-            )
+        if (inputBitmaps.isNotEmpty()) {
+            Row {
+                inputBitmaps.forEach {
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+            }
             Button(
                 onClick = {
-                    val inputFile = File(inputPath!!)
-                    val inputImage = ImageIO.read(inputFile)
-                    val analysisResults = analyzeImage(inputImage)[2] // беру только синий канал
-                    sp = analysisResults[0]
-                    triples = analysisResults[1]
-                    ws = analysisResults[2]
+                    sp.clear()
+                    triples.clear()
+                    ws.clear()
+                    inputPaths.forEach {
+                        val inputFile = File(it)
+                        val inputImage = ImageIO.read(inputFile)
+                        val analysisResults = analyzeImage(inputImage)[2] // беру только синий канал
+                        sp.add(analysisResults[0])
+                        triples.add(analysisResults[1])
+                        ws.add(analysisResults[2])
+                    }
                 }
             ) {
                 Text(
@@ -345,10 +362,15 @@ fun AumpScreen(
                 )
             }
         }
-        resultMessage?.let {
-            Text(
-                text = it
-            )
+        if (resultMessages.isNotEmpty()) {
+            Row {
+                resultMessages.forEach {
+                    Text(
+                        modifier = Modifier.width(300.dp),
+                        text = it
+                    )
+                }
+            }
         }
     }
 }
