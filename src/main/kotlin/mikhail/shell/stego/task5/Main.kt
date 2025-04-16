@@ -2,10 +2,7 @@ package mikhail.shell.stego.task5
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -215,51 +212,67 @@ fun RSAnalysisScreen(
 
 @Composable
 fun KhiSquaredScreen(window: Frame) {
-    var inputPath by remember { mutableStateOf(null as String?) }
-    val inputBitmap = remember(inputPath) { inputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() } }
-    var khi by remember { mutableStateOf(null as Double?) }
-    var df by remember { mutableStateOf(null as Int?) }
-    val p = remember(khi) { khi?.let { evaluateP(it, df!!) } }
-    val resultText = remember(khi, p) {
-        val builder = StringBuilder()
-        if (khi != null && p != null) {
-            builder.append("Хи-квадрат равен $khi.\n")
-            builder.append("P равен $p.\n")
-            if (p <= 0.006) {
+    val inputPaths = remember { mutableStateListOf<String>() }
+    val inputBitmaps by derivedStateOf {
+        inputPaths.map {
+            ImageIO.read(File(it)).toComposeImageBitmap()
+        }
+    }
+    val khi = remember { mutableStateListOf<Double>() }
+    val df = remember { mutableStateListOf<Int>() }
+    val p by derivedStateOf {
+        khi.indices.map { i ->
+            evaluateP(khi[i], df[i])
+        }
+    }
+    val resultTexts by derivedStateOf {
+        p.indices.map { i ->
+            val builder = StringBuilder()
+            builder.append("Хи-квадрат равен ${khi[i]}.\n")
+            builder.append("P равен ${p[i]}.\n")
+            if (p[i] <= 0.006) {
                 builder.append("В изображении содержится скрытая информация.\n")
             } else {
                 builder.append("В изображении нет скрытой информации.\n")
             }
-        }
-        if (builder.isNotBlank()) {
             builder.toString()
-        } else {
-            null
         }
     }
     Column {
         Button(
             onClick = {
-                inputPath = openFile(window)
+                val selectedFilePaths = openFiles(window)
+                if (selectedFilePaths != null) {
+                    inputPaths.clear()
+                    selectedFilePaths.forEach(inputPaths::add)
+                }
             }
         ) {
-            Text("Выбрать файл")
+            Text("Выбрать файлы")
         }
-        inputBitmap?.let {
-            Image(
-                modifier = Modifier.width(300.dp),
-                bitmap = it,
-                contentDescription = null
-            )
+        if (inputBitmaps.isNotEmpty()) {
+            Row {
+                inputBitmaps.forEach {
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+            }
             Button(
                 onClick = {
-                    val inputFile = File(inputPath!!)
-                    val inputImage = ImageIO.read(inputFile)
-                    val expected = inputImage.evaluateExpectedColorFrequencies()
-                    val actual = inputImage.evaluateActualColorFrequencies()
-                    val result = evaluateKhiSquared(expected, actual)
-                    khi = result.first
-                    df = result.second
+                    khi.clear()
+                    df.clear()
+                    inputPaths.forEach {
+                        val inputFile = File(it)
+                        val inputImage = ImageIO.read(inputFile)
+                        val expected = inputImage.evaluateExpectedColorFrequencies()
+                        val actual = inputImage.evaluateActualColorFrequencies()
+                        val result = evaluateKhiSquared(expected, actual)
+                        khi.add(result.first)
+                        df.add(result.second)
+                    }
                 }
             ) {
                 Text(
@@ -267,10 +280,15 @@ fun KhiSquaredScreen(window: Frame) {
                 )
             }
         }
-        resultText?.let {
-            Text(
-                text = it
-            )
+        if (resultTexts.isNotEmpty()) {
+            Row {
+                resultTexts.forEach {
+                    Text(
+                        modifier = Modifier.width(300.dp),
+                        text = it
+                    )
+                }
+            }
         }
     }
 }
