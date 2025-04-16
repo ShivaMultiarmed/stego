@@ -1,7 +1,6 @@
 package mikhail.shell.stego.task5
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -10,7 +9,6 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
@@ -124,7 +122,7 @@ fun RSAnalysisScreen(
     var p by remember { mutableStateOf(null as Float?) }
     val resultMessage = remember(p) {
         p?.let {
-            if (it >= 0.05f) {
+            if (it > 0.25725) {
                 "P = $it. В изображении нет стегосообщения."
             } else {
                 "P = $it. В изображении обнаружено стегосообщение."
@@ -179,11 +177,12 @@ fun KhiSquaredScreen(window: Frame) {
     val resultText = remember(khi, p) {
         val builder = StringBuilder()
         if (khi != null && p != null) {
-            builder.append("Хи-квадрат равен $khi.")
-            if (khi!! < 0.05) {
-                builder.append("В изображении содержится скрытая информация.")
+            builder.append("Хи-квадрат равен $khi.\n")
+            builder.append("P равен $p.\n")
+            if (p <= 0.006) {
+                builder.append("В изображении содержится скрытая информация.\n")
             } else {
-                builder.append("В изображении нет скрытой информации.")
+                builder.append("В изображении нет скрытой информации.\n")
             }
         }
         if (builder.isNotBlank()) {
@@ -210,8 +209,9 @@ fun KhiSquaredScreen(window: Frame) {
                 onClick = {
                     val inputFile = File(inputPath!!)
                     val inputImage = ImageIO.read(inputFile)
-                    val colorFrequencies = inputImage.evaluateColorFrequencies()
-                    val result = colorFrequencies.evaluateKhiSquared()
+                    val expected = inputImage.evaluateExpectedColorFrequencies()
+                    val actual = inputImage.evaluateActualColorFrequencies()
+                    val result = evaluateKhiSquared(expected, actual)
                     khi = result.first
                     df = result.second
                 }
@@ -242,7 +242,10 @@ fun AumpScreen(
         val resultMessage = remember(sp, triples, ws) {
             if (sp != null && triples != null && ws != null) {
                 val stringBuilder = StringBuilder()
-                if (sp!! > 0.4 && triples!! > 0.4 && ws!! > 0.4) {
+                stringBuilder.append("sp = $sp\n")
+                stringBuilder.append("triples = $triples\n")
+                stringBuilder.append("ws = $ws\n")
+                if (sp!! >= 0.064875) {
                     stringBuilder.append("Высокая вероятность, что встроены данные")
                 } else {
                     stringBuilder.append("Данных скорее всего нет")

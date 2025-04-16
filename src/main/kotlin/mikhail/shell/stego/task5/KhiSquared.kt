@@ -6,38 +6,31 @@ import kotlin.math.pow
 
 val Int.B get() = this and 0xFF
 
-fun BufferedImage.evaluateColorFrequencies(): IntArray {
-    val result = IntArray(256) { 0 }
+fun Int.lastBits(n: Int) = this and (2.0.pow(n) - 1).toInt()
+
+fun BufferedImage.evaluateActualColorFrequencies(lastBits: Int = 1): IntArray {
+    val result = IntArray(2.0.pow(lastBits).toInt()) { 0 }
 
     for (y in 0 until height) {
         for (x in 0 until width) {
             val pixel = getRGB(x, y)
-            val blue = pixel.B
-            result[blue]++
+            val lsb = pixel.B.lastBits(lastBits)
+            result[lsb]++
         }
     }
     return result
 }
 
-fun IntArray.evaluateKhiSquared(): Pair<Double, Int> {
+fun BufferedImage.evaluateExpectedColorFrequencies(lastBits: Int = 1) = IntArray(2.0.pow(lastBits).toInt()) { width * height / 2.0.pow(lastBits).toInt() }
+
+fun evaluateKhiSquared(expected: IntArray, actual: IntArray): Pair<Double, Int> {
     var khiSquare = 0.0
-    var validPairs = 0
 
-    for (i in 0 until 128) {
-        val n1 = this[2 * i].toDouble()
-        val n2 = this[2 * i + 1].toDouble()
-        val sum = n1 + n2
-
-        if (sum > 0) {
-            val expected = sum / 2.0
-            khiSquare += (n1 - expected).pow(2) / expected
-            khiSquare += (n2 - expected).pow(2) / expected
-            validPairs++
-        }
+    for (i in expected.indices) {
+        khiSquare += (expected[i] - actual[i]).toDouble().pow(2) / expected[i]
     }
 
-    val df = validPairs - 1
-    khiSquare /= 2 * validPairs
+    val df = expected.size - 1
     return Pair(khiSquare, df)
 }
 
@@ -45,7 +38,7 @@ fun evaluateP(chi2Stat: Double, degreesOfFreedom: Int): Double {
     if (degreesOfFreedom <= 0 || chi2Stat < 0) return 1.0
     return try {
         val chi2Dist = ChiSquaredDistribution(degreesOfFreedom.toDouble())
-        1.0 - chi2Dist.cumulativeProbability(chi2Stat)
+        1 - chi2Dist.cumulativeProbability(chi2Stat)
     } catch (e: Exception) {
         1.0
     }

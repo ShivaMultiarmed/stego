@@ -2,6 +2,7 @@ package mikhail.shell.stego.task2
 
 import javafx.scene.Scene
 import javafx.scene.control.Button
+import javafx.scene.control.TextArea
 import javafx.scene.control.TextField
 import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
@@ -26,7 +27,6 @@ class DwmIntegratingApplication : Stage() {
         scene = Scene(root)
         show()
         createPickerButton()
-        createSavingButton()
         createInputField()
         createInsertingButton()
         createExtractingButton()
@@ -37,21 +37,20 @@ class DwmIntegratingApplication : Stage() {
         root.children.add(button)
         button.setOnMouseClicked {
             val inputFileChooser = FileChooser()
+            inputFileChooser.initialDirectory = inputFile?.parentFile
             inputFile = inputFileChooser.showOpenDialog(this)
-        }
-    }
-
-    private fun createSavingButton() {
-        val button = Button("Выбрать место сохранения")
-        root.children.add(button)
-        button.setOnMouseClicked {
-            val outputFileChooser = FileChooser()
-            outputFile = outputFileChooser.showSaveDialog(this)
+            outputFile = File(inputFile?.parentFile?.absolutePath, inputFile?.nameWithoutExtension + "-output." + inputFile?.extension)
         }
     }
 
     private fun createInputField() {
-        val field = TextField()
+        val field = TextArea().apply {
+            prefHeight = 500.0
+            prefWidth = 600.0
+            prefColumnCount = 600
+            isWrapText = true
+            maxWidth = 600.0
+        }
         root.children.add(field)
         field.textProperty().addListener { _, _, newValue ->
             bytesDWM = newValue.encodeToByteArray()
@@ -59,7 +58,7 @@ class DwmIntegratingApplication : Stage() {
     }
 
     private fun createInsertingButton() {
-        val button = Button("Встроить ЦВЗ")
+        val button = Button("Встроить данные")
         root.children.add(button)
         button.setOnMouseClicked {
             if (inputFile != null && outputFile != null) {
