@@ -135,7 +135,7 @@ fun VisualAttackScreen(
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 inputBitmaps.forEachIndexed { i, it ->
                     Image(
@@ -150,7 +150,7 @@ fun VisualAttackScreen(
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 outputBitmaps.forEach {
                     Image(
@@ -231,7 +231,7 @@ fun RSAnalysisScreen(
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 inputBitmaps.forEach {
                     Image(
@@ -246,7 +246,7 @@ fun RSAnalysisScreen(
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 resultMsgs.forEach {
                     Text(
@@ -334,7 +334,7 @@ fun KhiSquaredScreen(frame: Frame) {
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 inputBitmaps.forEach {
                     Image(
@@ -349,7 +349,7 @@ fun KhiSquaredScreen(frame: Frame) {
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 resultTexts.forEach {
                     Text(
@@ -433,7 +433,7 @@ fun AumpScreen(
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 inputBitmaps.forEach {
                     Image(
@@ -448,7 +448,7 @@ fun AumpScreen(
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
             ) {
                 resultMessages.forEach {
                     Text(
