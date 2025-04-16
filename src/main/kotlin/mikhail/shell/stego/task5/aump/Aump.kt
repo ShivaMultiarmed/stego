@@ -2,6 +2,7 @@ package mikhail.shell.stego.task5.aump
 
 import org.apache.commons.math3.linear.*
 import java.awt.image.BufferedImage
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -152,7 +153,7 @@ fun bufferedImageToChannels(image: BufferedImage): Array<Array<IntArray>> {
     return arrayOf(red, green, blue)
 }
 
-fun analyzeImage(image: BufferedImage): Array<DoubleArray> {
+fun aumpAnalyzeImage(image: BufferedImage): Array<DoubleArray> {
     val channels = bufferedImageToChannels(image)
     val channelNames = listOf("Red", "Green", "Blue")
     val result = Array(3) { DoubleArray(3) }
@@ -171,5 +172,9 @@ fun analyzeImage(image: BufferedImage): Array<DoubleArray> {
         result[index][2] = betaWs
         println("  - WS Beta: ${"%.4f".format(betaWs)}")
     }
-    return result
+    return result.map {
+        it.map {
+            abs(it)
+        }.toDoubleArray()
+    }.toTypedArray()
 }

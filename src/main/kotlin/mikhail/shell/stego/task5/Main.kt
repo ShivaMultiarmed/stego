@@ -1,12 +1,15 @@
 package mikhail.shell.stego.task5
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -14,8 +17,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import mikhail.shell.stego.task4.openFile
-import mikhail.shell.stego.task5.aump.analyzeImage
+import mikhail.shell.stego.task5.aump.aumpAnalyzeImage
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -29,6 +31,8 @@ fun main(args: Array<String>) = application {
     ) {
         Column {
             TabRow(
+                modifier = Modifier.fillMaxWidth(),
+                currentTab = screen,
                 onTabSwitch = {
                     screen = it
                 }
@@ -45,14 +49,20 @@ fun main(args: Array<String>) = application {
 
 @Composable
 fun TabRow(
+    modifier: Modifier = Modifier,
+    currentTab: Screen,
     onTabSwitch: (screen: Screen) -> Unit
 ) {
-    Row {
-        Screen.entries.forEach {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Screen.entries.forEach { screen ->
             Tab(
-                screen = it,
+                screen = screen,
+                checked = currentTab == screen,
                 onClick = {
-                    onTabSwitch(it)
+                    onTabSwitch(screen)
                 }
             )
         }
@@ -60,9 +70,18 @@ fun TabRow(
 }
 
 @Composable
-fun Tab(screen: Screen, onClick: () -> Unit) {
+fun Tab(
+    screen: Screen,
+    checked: Boolean,
+    onClick: () -> Unit
+) {
     Button(
-        onClick = onClick
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = if (checked) Color.White else Color(230, 230, 230),
+            backgroundColor = if (checked) Color(40, 83, 153) else Color.White
+        ),
+        shape = RoundedCornerShape(0.dp, 0.dp, 10.dp, 10.dp)
     ) {
         Text(
             text = screen.title
@@ -82,19 +101,42 @@ fun VisualAttackScreen(
     }
     val outputBitmaps = remember { mutableStateListOf<ImageBitmap>() }
     Column {
-        Button(
-            onClick = {
-                val selectedFiles = openFiles(frame)
-                if (selectedFiles != null) {
-                    inputPaths.clear()
-                    selectedFiles.forEach(inputPaths::add)
-                }
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
         ) {
-            Text("Выбрать файлы")
+            StegoButton(
+                text = "Выбрать файлы",
+                onClick = {
+                    val selectedFiles = openFiles(frame)
+                    if (selectedFiles != null) {
+                        inputPaths.clear()
+                        selectedFiles.forEach(inputPaths::add)
+                    }
+                }
+            )
+            if (inputBitmaps.isNotEmpty()) {
+                StegoButton(
+                    text = "Анализировать",
+                    onClick = {
+                        outputBitmaps.clear()
+                        inputPaths.forEach {
+                            val inputFile = File(it)
+                            val inputImage = ImageIO.read(inputFile)
+                            val outputImage = inputImage.proccess()
+                            outputBitmaps.add(outputImage.toComposeImageBitmap())
+                        }
+                    }
+                )
+            }
         }
+        val scrollState = rememberScrollState()
         if (inputBitmaps.isNotEmpty()) {
-            Row {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 inputBitmaps.forEachIndexed { i, it ->
                     Image(
                         modifier = Modifier.width(300.dp),
@@ -103,24 +145,13 @@ fun VisualAttackScreen(
                     )
                 }
             }
-            Button(
-                onClick = {
-                    outputBitmaps.clear()
-                    inputPaths.forEach {
-                        val inputFile = File(it)
-                        val inputImage = ImageIO.read(inputFile)
-                        val outputImage = inputImage.proccess()
-                        outputBitmaps.add(outputImage.toComposeImageBitmap())
-                    }
-                }
-            ) {
-                Text(
-                    text = "Анализировать"
-                )
-            }
         }
         if (outputBitmaps.isNotEmpty()) {
-            Row {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 outputBitmaps.forEach {
                     Image(
                         modifier = Modifier.width(300.dp),
@@ -130,6 +161,10 @@ fun VisualAttackScreen(
                 }
             }
         }
+        HorizontalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -137,6 +172,7 @@ fun VisualAttackScreen(
 fun RSAnalysisScreen(
     frame: Frame
 ) {
+    val scrollState = rememberScrollState()
     val inputPaths = remember { mutableStateListOf<String>() }
     val inputBitmaps by derivedStateOf {
         inputPaths.map {
@@ -148,8 +184,10 @@ fun RSAnalysisScreen(
         p.map {
             val stringBuilder = StringBuilder()
             stringBuilder.append("P = $it.\n")
-            if (it > 0.25725) {
+            if (it > 0.2685) {
                 stringBuilder.append("В изображении нет стегосообщения.\n")
+            } else if (it in 0.246..0.2685) {
+                stringBuilder.append("В изображении обнаружены отклонения.\n")
             } else {
                 stringBuilder.append("В изображении обнаружено стегосообщение.\n")
             }
@@ -157,19 +195,44 @@ fun RSAnalysisScreen(
         }
     }
     Column {
-        Button(
-            onClick = {
-                val selectedFiles = openFiles(frame)
-                if (selectedFiles != null) {
-                    inputPaths.clear()
-                    selectedFiles.forEach(inputPaths::add)
-                }
-            }
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
         ) {
-            Text("Выбрать файлы")
+            StegoButton(
+                text = "Выбрать файлы",
+                onClick = {
+                    val selectedFiles = openFiles(frame)
+                    if (selectedFiles != null) {
+                        inputPaths.clear()
+                        selectedFiles.forEach(inputPaths::add)
+                    }
+                }
+            )
+            if (inputBitmaps.isNotEmpty()) {
+                StegoButton(
+                    onClick = {
+                        p.clear()
+                        val analyzer = RSAnalysis.getInstance()
+                        inputPaths.forEach {
+                            val inputFile = File(it)
+                            val inputImage = ImageIO.read(inputFile)
+                            val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, false)
+                            val R = results[0]
+                            val S = results[1]
+                            p.add(((R - S) / (R + S)).toFloat())
+                        }
+                    },
+                    text = "Анализировать"
+                )
+            }
         }
         if (inputBitmaps.isNotEmpty()) {
-            Row {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 inputBitmaps.forEach {
                     Image(
                         modifier = Modifier.width(300.dp),
@@ -178,27 +241,13 @@ fun RSAnalysisScreen(
                     )
                 }
             }
-            Button(
-                onClick = {
-                    p.clear()
-                    val analyzer = RSAnalysis.getInstance()
-                    inputPaths.forEach {
-                        val inputFile = File(it)
-                        val inputImage = ImageIO.read(inputFile)
-                        val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, false)
-                        val R = results[0]
-                        val S = results[1]
-                        p.add(((R - S) / (R + S)).toFloat())
-                    }
-                }
-            ) {
-                Text(
-                    text = "Анализировать"
-                )
-            }
         }
         if (resultMsgs.isNotEmpty()) {
-            Row {
+            Row (
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 resultMsgs.forEach {
                     Text(
                         modifier = Modifier.width(300.dp),
@@ -207,11 +256,16 @@ fun RSAnalysisScreen(
                 }
             }
         }
+        HorizontalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
-fun KhiSquaredScreen(window: Frame) {
+fun KhiSquaredScreen(frame: Frame) {
+    val scrollState = rememberScrollState()
     val inputPaths = remember { mutableStateListOf<String>() }
     val inputBitmaps by derivedStateOf {
         inputPaths.map {
@@ -230,8 +284,12 @@ fun KhiSquaredScreen(window: Frame) {
             val builder = StringBuilder()
             builder.append("Хи-квадрат равен ${khi[i]}.\n")
             builder.append("P равен ${p[i]}.\n")
-            if (p[i] <= 0.006) {
-                builder.append("В изображении содержится скрытая информация.\n")
+            if (p[i] < 0.000045) {
+                builder.append("В изображении точно есть скрытая информация.\n")
+            } else if (p[i] in 0.000045..<0.00623) {
+                builder.append("В изображении может быть скрытая информация.\n")
+            } else if (p[i] in 0.00623..<0.012415) {
+                builder.append("В изображении присутствуют отклонения.\n")
             } else {
                 builder.append("В изображении нет скрытой информации.\n")
             }
@@ -239,19 +297,45 @@ fun KhiSquaredScreen(window: Frame) {
         }
     }
     Column {
-        Button(
-            onClick = {
-                val selectedFilePaths = openFiles(window)
-                if (selectedFilePaths != null) {
-                    inputPaths.clear()
-                    selectedFilePaths.forEach(inputPaths::add)
-                }
-            }
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
         ) {
-            Text("Выбрать файлы")
+            StegoButton(
+                text = "Выбрать файлы",
+                onClick = {
+                    val selectedFiles = openFiles(frame)
+                    if (selectedFiles != null) {
+                        inputPaths.clear()
+                        selectedFiles.forEach(inputPaths::add)
+                    }
+                }
+            )
+            if (inputBitmaps.isNotEmpty()) {
+                StegoButton(
+                    onClick = {
+                        khi.clear()
+                        df.clear()
+                        inputPaths.forEach {
+                            val inputFile = File(it)
+                            val inputImage = ImageIO.read(inputFile)
+                            val expected = inputImage.evaluateExpectedColorFrequencies()
+                            val actual = inputImage.evaluateActualColorFrequencies()
+                            val result = evaluateKhiSquared(expected, actual)
+                            khi.add(result.first)
+                            df.add(result.second)
+                        }
+                    },
+                    text = "Анализировать"
+                )
+            }
         }
         if (inputBitmaps.isNotEmpty()) {
-            Row {
+            Row (
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 inputBitmaps.forEach {
                     Image(
                         modifier = Modifier.width(300.dp),
@@ -260,28 +344,13 @@ fun KhiSquaredScreen(window: Frame) {
                     )
                 }
             }
-            Button(
-                onClick = {
-                    khi.clear()
-                    df.clear()
-                    inputPaths.forEach {
-                        val inputFile = File(it)
-                        val inputImage = ImageIO.read(inputFile)
-                        val expected = inputImage.evaluateExpectedColorFrequencies()
-                        val actual = inputImage.evaluateActualColorFrequencies()
-                        val result = evaluateKhiSquared(expected, actual)
-                        khi.add(result.first)
-                        df.add(result.second)
-                    }
-                }
-            ) {
-                Text(
-                    text = "Анализировать"
-                )
-            }
         }
         if (resultTexts.isNotEmpty()) {
-            Row {
+            Row (
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 resultTexts.forEach {
                     Text(
                         modifier = Modifier.width(300.dp),
@@ -290,13 +359,18 @@ fun KhiSquaredScreen(window: Frame) {
                 }
             }
         }
+        HorizontalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
 fun AumpScreen(
-    window: Frame
+    frame: Frame
 ) {
+    val scrollState = rememberScrollState()
     Column {
         val inputPaths = remember { mutableStateListOf<String>() }
         val inputBitmaps by derivedStateOf {
@@ -305,35 +379,62 @@ fun AumpScreen(
             }
         }
         val sp = remember { mutableStateListOf<Double>() }
-        var triples = remember { mutableStateListOf<Double>() }
-        var ws = remember { mutableStateListOf<Double>() }
+        val triples = remember { mutableStateListOf<Double>() }
+        val ws = remember { mutableStateListOf<Double>() }
         val resultMessages by derivedStateOf {
             sp.indices.map { i ->
                 val stringBuilder = StringBuilder()
-                stringBuilder.append("sp = ${sp[i]}\n")
-                stringBuilder.append("triples = ${triples[i]}\n")
                 stringBuilder.append("ws = ${ws[i]}\n")
-                if (sp[i] >= 0.064875) {
-                    stringBuilder.append("Встроены данные")
+                stringBuilder.append("sp = ${sp[i]}\n")
+                if (ws[i] >= 0.02355 && sp[i] >= 0.064875) {
+                    stringBuilder.append("Присутствуют данные")
+                } else if ((ws[i] >= 0.02355) xor (sp[i] >= 0.064875)) {
+                    stringBuilder.append("Значительные отклонения")
                 } else {
                     stringBuilder.append("Данных нет")
                 }
                 stringBuilder.toString()
             }
         }
-        Button(
-            onClick = {
-                val selectedPaths = openFiles(window)
-                if (selectedPaths != null) {
-                    inputPaths.clear()
-                    selectedPaths.forEach(inputPaths::add)
-                }
-            }
+        Row (
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
         ) {
-            Text("Выбрать файлы")
+            StegoButton(
+                text = "Выбрать файлы",
+                onClick = {
+                    val selectedFiles = openFiles(frame)
+                    if (selectedFiles != null) {
+                        inputPaths.clear()
+                        selectedFiles.forEach(inputPaths::add)
+                    }
+                }
+            )
+            if (inputBitmaps.isNotEmpty()) {
+                StegoButton(
+                    onClick = {
+                        sp.clear()
+                        triples.clear()
+                        ws.clear()
+                        inputPaths.forEach {
+                            val inputFile = File(it)
+                            val inputImage = ImageIO.read(inputFile)
+                            val analysisResults = aumpAnalyzeImage(inputImage)[2] // беру только синий канал
+                            sp.add(analysisResults[0])
+                            triples.add(analysisResults[1])
+                            ws.add(analysisResults[2])
+                        }
+                    },
+                    text = "Анализировать"
+                )
+            }
         }
         if (inputBitmaps.isNotEmpty()) {
-            Row {
+            Row (
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 inputBitmaps.forEach {
                     Image(
                         modifier = Modifier.width(300.dp),
@@ -342,28 +443,13 @@ fun AumpScreen(
                     )
                 }
             }
-            Button(
-                onClick = {
-                    sp.clear()
-                    triples.clear()
-                    ws.clear()
-                    inputPaths.forEach {
-                        val inputFile = File(it)
-                        val inputImage = ImageIO.read(inputFile)
-                        val analysisResults = analyzeImage(inputImage)[2] // беру только синий канал
-                        sp.add(analysisResults[0])
-                        triples.add(analysisResults[1])
-                        ws.add(analysisResults[2])
-                    }
-                }
-            ) {
-                Text(
-                    text = "Анализировать"
-                )
-            }
         }
         if (resultMessages.isNotEmpty()) {
-            Row {
+            Row (
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(scrollState, true),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 resultMessages.forEach {
                     Text(
                         modifier = Modifier.width(300.dp),
@@ -372,6 +458,10 @@ fun AumpScreen(
                 }
             }
         }
+        HorizontalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -380,6 +470,28 @@ enum class Screen(val title: String) {
     RS_ANALYSIS("RS-анализ"),
     KHI_SQUARED("Хи-квадрат"),
     AUMP("AUMP")
+}
+
+@Preview
+@Composable
+
+fun StegoButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = Color.White,
+            backgroundColor = Color(106, 162, 252)
+        ),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Text(
+            text = text
+        )
+    }
 }
 
 fun openFiles(
