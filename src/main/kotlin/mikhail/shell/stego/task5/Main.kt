@@ -140,41 +140,59 @@ fun VisualAttackScreen(
 fun RSAnalysisScreen(
     frame: Frame
 ) {
-    var inputPath by remember { mutableStateOf(null as String?) }
-    val inputBitmap = remember(inputPath) { inputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() } }
-    var p by remember { mutableStateOf(null as Float?) }
-    val resultMessage = remember(p) {
-        p?.let {
+    val inputPaths = remember { mutableStateListOf<String>() }
+    val inputBitmaps by derivedStateOf {
+        inputPaths.map {
+            ImageIO.read(File(it)).toComposeImageBitmap()
+        }
+    }
+    val p = remember { mutableStateListOf<Float>() }
+    val resultMsgs by derivedStateOf {
+        p.map {
+            val stringBuilder = StringBuilder()
+            stringBuilder.append("P = $it.\n")
             if (it > 0.25725) {
-                "P = $it. В изображении нет стегосообщения."
+                stringBuilder.append("В изображении нет стегосообщения.\n")
             } else {
-                "P = $it. В изображении обнаружено стегосообщение."
+                stringBuilder.append("В изображении обнаружено стегосообщение.\n")
             }
+            stringBuilder.toString()
         }
     }
     Column {
         Button(
             onClick = {
-                inputPath = openFile(frame)
+                val selectedFiles = openFiles(frame)
+                if (selectedFiles != null) {
+                    inputPaths.clear()
+                    selectedFiles.forEach(inputPaths::add)
+                }
             }
         ) {
-            Text("Выбрать файл")
+            Text("Выбрать файлы")
         }
-        inputBitmap?.let {
-            Image(
-                modifier = Modifier.size(300.dp),
-                bitmap = it,
-                contentDescription = null
-            )
+        if (inputBitmaps.isNotEmpty()) {
+            Row {
+                inputBitmaps.forEach {
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+            }
             Button(
                 onClick = {
-                    val inputFile = File(inputPath!!)
-                    val inputImage = ImageIO.read(inputFile)
+                    p.clear()
                     val analyzer = RSAnalysis.getInstance()
-                    val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, false)
-                    val R = results[0]
-                    val S = results[1]
-                    p = ((R - S) / (R + S)).toFloat()
+                    inputPaths.forEach {
+                        val inputFile = File(it)
+                        val inputImage = ImageIO.read(inputFile)
+                        val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, false)
+                        val R = results[0]
+                        val S = results[1]
+                        p.add(((R - S) / (R + S)).toFloat())
+                    }
                 }
             ) {
                 Text(
@@ -182,10 +200,15 @@ fun RSAnalysisScreen(
                 )
             }
         }
-        resultMessage?.let {
-            Text(
-                text = it
-            )
+        if (resultMsgs.isNotEmpty()) {
+            Row {
+                resultMsgs.forEach {
+                    Text(
+                        modifier = Modifier.width(300.dp),
+                        text = it
+                    )
+                }
+            }
         }
     }
 }
@@ -326,5 +349,5 @@ fun openFiles(
     val dialog = FileDialog(parent, title, FileDialog.LOAD)
     dialog.isMultipleMode = true
     dialog.isVisible = true
-    return if (dialog.files != null) dialog.files.toList().map { it.absolutePath } else null
+    return dialog.files.takeIf { it.isNotEmpty() }?.toList()?.map { it.absolutePath }
 }
