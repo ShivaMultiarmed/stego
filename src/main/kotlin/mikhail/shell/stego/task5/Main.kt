@@ -1,6 +1,7 @@
 package mikhail.shell.stego.task5
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -8,7 +9,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
@@ -16,6 +19,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import mikhail.shell.stego.task4.openFile
 import mikhail.shell.stego.task5.aump.analyzeImage
+import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import javax.imageio.ImageIO
@@ -73,29 +77,44 @@ fun Tab(screen: Screen, onClick: () -> Unit) {
 fun VisualAttackScreen(
     frame: Frame
 ) {
-    var inputPath by remember { mutableStateOf(null as String?) }
-    val inputBitmap = remember(inputPath) { inputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() } }
-    var outputBitmap by remember { mutableStateOf(null as ImageBitmap?) }
+    val inputPaths = remember { mutableStateListOf<String>() }
+    val inputBitmaps by derivedStateOf {
+        inputPaths.map {
+            ImageIO.read(File(it)).toComposeImageBitmap()
+        }
+    }
+    val outputBitmaps = remember { mutableStateListOf<ImageBitmap>() }
     Column {
         Button(
             onClick = {
-                inputPath = openFile(frame)
+                val selectedFiles = openFiles(frame)
+                if (selectedFiles != null) {
+                    inputPaths.clear()
+                    selectedFiles.forEach(inputPaths::add)
+                }
             }
         ) {
-            Text("Выбрать файл")
+            Text("Выбрать файлы")
         }
-        inputBitmap?.let {
-            Image(
-                modifier = Modifier.width(300.dp),
-                bitmap = it,
-                contentDescription = null
-            )
+        if (inputBitmaps.isNotEmpty()) {
+            Row {
+                inputBitmaps.forEachIndexed { i, it ->
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+            }
             Button(
                 onClick = {
-                    val inputFile = File(inputPath!!)
-                    val inputImage = ImageIO.read(inputFile)
-                    val outputImage = inputImage.proccess()
-                    outputBitmap = outputImage.toComposeImageBitmap()
+                    outputBitmaps.clear()
+                    inputPaths.forEach {
+                        val inputFile = File(it)
+                        val inputImage = ImageIO.read(inputFile)
+                        val outputImage = inputImage.proccess()
+                        outputBitmaps.add(outputImage.toComposeImageBitmap())
+                    }
                 }
             ) {
                 Text(
@@ -103,12 +122,16 @@ fun VisualAttackScreen(
                 )
             }
         }
-        outputBitmap?.let {
-            Image(
-                modifier = Modifier.width(300.dp),
-                bitmap = it,
-                contentDescription = null
-            )
+        if (outputBitmaps.isNotEmpty()) {
+            Row {
+                outputBitmaps.forEach {
+                    Image(
+                        modifier = Modifier.width(300.dp),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+            }
         }
     }
 }
@@ -294,4 +317,14 @@ enum class Screen(val title: String) {
     RS_ANALYSIS("RS-анализ"),
     KHI_SQUARED("Хи-квадрат"),
     AUMP("AUMP")
+}
+
+fun openFiles(
+    parent: Frame,
+    title: String = "Выберите файлы"
+): List<String>? {
+    val dialog = FileDialog(parent, title, FileDialog.LOAD)
+    dialog.isMultipleMode = true
+    dialog.isVisible = true
+    return if (dialog.files != null) dialog.files.toList().map { it.absolutePath } else null
 }
