@@ -2,9 +2,18 @@ package mikhail.shell.stego.task5.aump
 
 import org.apache.commons.math3.linear.*
 import java.awt.image.BufferedImage
-import kotlin.math.abs
+import java.awt.image.DataBufferByte
 import kotlin.math.pow
 import kotlin.math.sqrt
+
+
+fun aump(image: BufferedImage, m: Int = 4, d: Int = 1): Double {
+    val pixelMatrix = (image.raster.dataBuffer as DataBufferByte).data
+        .map { it.toInt() and 0xFF }
+        .toIntArray()
+        .to2DArray(image.height, image.width)
+    return aump(pixelMatrix, m, d)
+}
 
 fun aump(X: Array<Array<Int>>, m: Int, d: Int): Double {
     val XDouble = X.map { row -> row.map { it.toDouble() }.toTypedArray() }.toTypedArray()
@@ -132,49 +141,9 @@ private fun RealMatrix.to2DArray(): Array<DoubleArray> =
     Array(rowDimension) { i -> getRow(i) }
 
 
-fun bufferedImageToChannels(image: BufferedImage): Array<Array<IntArray>> {
-    val width = image.width
-    val height = image.height
-
-    // Создаём массивы для каждого канала (R, G, B)
-    val red = Array(height) { IntArray(width) { 0 } }
-    val green = Array(height) { IntArray(width) { 0 } }
-    val blue = Array(height) { IntArray(width) { 0 } }
-
-    for (y in 0 until height) {
-        for (x in 0 until width) {
-            val color = image.getRGB(x, y)
-            red[y][x] = (color shr 16) and 0xFF    // Красный канал
-            green[y][x] = (color shr 8) and 0xFF    // Зелёный канал
-            blue[y][x] = color and 0xFF             // Синий канал
-        }
+fun IntArray.to2DArray(rows: Int, cols: Int): Array<Array<Int>> {
+    require(rows * cols == size) { "Dimensions don't match array size" }
+    return Array(rows) { i ->
+        Array(cols) { j -> this[i * cols + j] }
     }
-
-    return arrayOf(red, green, blue)
-}
-
-fun aumpAnalyzeImage(image: BufferedImage): Array<DoubleArray> {
-    val channels = bufferedImageToChannels(image)
-    val channelNames = listOf("Red", "Green", "Blue")
-    val result = Array(3) { DoubleArray(3) }
-
-    channels.forEachIndexed { index, channelArray ->
-        val betaSp = sp(channelArray.map { it.toTypedArray() }.toTypedArray())
-        //val betaTriples = triples(channelArray.map { it.toTypedArray() }.toTypedArray())
-        val betaTriples = betaSp
-        val betaWs = ws(channelArray.map { it.toTypedArray() }.toTypedArray(), "yes")
-
-        println("${channelNames[index]} Channel Analysis:")
-        result[index][0] = betaSp
-        println("  - SP Beta: ${"%.4f".format(betaSp)}")
-        result[index][1] = betaTriples
-        println("  - Triples Beta: ${"%.4f".format(betaTriples)}")
-        result[index][2] = betaWs
-        println("  - WS Beta: ${"%.4f".format(betaWs)}")
-    }
-    return result.map {
-        it.map {
-            abs(it)
-        }.toDoubleArray()
-    }.toTypedArray()
 }

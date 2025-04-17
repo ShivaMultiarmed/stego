@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.launch
-import mikhail.shell.stego.task5.aump.aumpAnalyzeImage
+import mikhail.shell.stego.task5.aump.aump
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -407,15 +407,13 @@ fun AumpScreen(
                 ImageIO.read(File(it)).toComposeImageBitmap()
             }
         }
-        val sp = remember { mutableStateListOf<Double>() }
-        val triples = remember { mutableStateListOf<Double>() }
-        val ws = remember { mutableStateListOf<Double>() }
+        val results = remember { mutableStateListOf<Double>() }
         val resultMessages by derivedStateOf {
-            sp.indices.map { i ->
+            results.indices.map { i ->
                 val stringBuilder = StringBuilder()
                 //stringBuilder.append("ws = ${ws[i]}\n")
-                stringBuilder.append("sp = ${sp[i]}\n")
-                if (sp[i] >= 0.0532) {
+                stringBuilder.append("sp = ${results[i]}\n")
+                if (results[i] >= 0.0532) {
                     stringBuilder.append("Присутствуют данные")
                 } else {
                     stringBuilder.append("Данных нет")
@@ -443,17 +441,12 @@ fun AumpScreen(
                     onClick = {
                         coroutineScope.launch {
                             progress = 0f
-                            sp.clear()
-                            triples.clear()
-                            ws.clear()
+                            results.clear()
                             inputPaths.forEach {
                                 progress += 1 / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
-                                val analysisResults = aumpAnalyzeImage(inputImage)[2] // беру только синий канал
-                                sp.add(analysisResults[0])
-                                triples.add(analysisResults[1])
-                                ws.add(analysisResults[2])
+                                results.add(aump(inputImage))
                             }
                         }
                     },

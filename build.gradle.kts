@@ -89,6 +89,7 @@ tasks.create<Jar>("stego3") {
     }
     from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task3/**")
+        include("mikhail/shell/stego/task5/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
