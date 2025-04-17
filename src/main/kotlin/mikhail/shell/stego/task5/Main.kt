@@ -121,13 +121,14 @@ fun VisualAttackScreen(
                         bitNumber = it
                     },
                     valueRange = 0f..7f,
-                    steps = 8,
+                    steps = 6,
                     colors = SliderDefaults.colors(
                         thumbColor = Color(106, 162, 252),
                         activeTrackColor = Color(200, 219, 250),
                         inactiveTickColor = Color(240, 240, 240)
                     )
                 )
+                Text(bitNumber.toInt().toString() + "-й бит")
                 StegoButton(
                     text = "Анализировать",
                     onClick = {
