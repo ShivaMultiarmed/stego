@@ -1,9 +1,9 @@
 package mikhail.shell.stego.task4
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
@@ -14,6 +14,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import kotlinx.coroutines.launch
+import mikhail.shell.stego.task5.openFiles
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -51,7 +53,6 @@ fun App(
 ) {
     Box(
         modifier = Modifier
-            .size(800.dp, 800.dp)
     ) {
         Column {
             Row {
@@ -81,29 +82,40 @@ fun App(
 fun IntegratingScreen(
     parent: Frame
 ) {
-    Column {
-        var inputPath by remember { mutableStateOf(null as String?) }
-        val inputBitmap = remember(inputPath) {
-            inputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() }
+    val screenScrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    var progress by remember { mutableStateOf(1f) }
+    Column(
+        modifier = Modifier.fillMaxSize()
+            .verticalScroll(screenScrollState)
+    ) {
+        val inputPaths = remember { mutableStateListOf<String>() }
+        val interpolatedPaths = remember { mutableStateListOf<String>() }
+        val interpolatedBitmaps by derivedStateOf {
+            inputPaths.map { ImageIO.read(File(it)).toComposeImageBitmap() }
         }
-        var outputPath by remember { mutableStateOf(null as String?) }
-        val outputBitmap = remember (outputPath) {
-            outputPath?.let { ImageIO.read(File(it)).toComposeImageBitmap() }
+        val outputPaths = remember { mutableStateListOf<String>() }
+        val outputBitmaps by derivedStateOf {
+            outputPaths.map { ImageIO.read(File(it)).toComposeImageBitmap() }
         }
         var data by remember { mutableStateOf("") }
-        var mse by remember { mutableStateOf(null as Float?) }
-        val psnr = remember (mse) { mse?.let { evaluatePSNR(255f, it) } }
-        Button(
-            onClick = {
-                val selectedFile = openFile(parent, if (inputPath == null) "Выберите изображение" else "Измените изображение")
-                if (selectedFile != null) {
-                    inputPath = selectedFile
+        val mse = remember { mutableStateListOf<Float>() }
+        val psnr = derivedStateOf { mse.map { evaluatePSNR(255f, it) } }
+        Row {
+            Button(
+                onClick = {
+                    val selectedFiles = openFiles(parent, if (inputPaths.isEmpty()) "Выберите изображения" else "Измените изображения")
+                    if (selectedFiles != null) {
+                        inputPaths.clear()
+                        selectedFiles.forEach(inputPaths::add)
+                    }
                 }
+            ) {
+                Text(
+                    text = if (inputPaths.isEmpty()) "Выберите изображение" else "Измените изображение"
+                )
             }
-        ) {
-            Text(
-                text = if (inputPath == null) "Выберите изображение" else "Измените изображение"
-            )
+            CircularProgressIndicator(progress)
         }
         TextField(
             modifier = Modifier.size(400.dp, 200.dp),
@@ -112,16 +124,24 @@ fun IntegratingScreen(
         )
         Button(
             onClick = {
-                inputPath?.let {
-                    val inputFile = File(it)
-                    val inputImage = ImageIO.read(inputFile)
-                    val interpolatedImage = inputImage.interpolate()
-                    val dataBytes = data.encodeToByteArray()
-                    val outputImage = interpolatedImage.insertData(dataBytes)
-                    val outputFile = File(inputFile.parentFile, inputFile.nameWithoutExtension + "-output." + inputFile.extension)
-                    ImageIO.write(outputImage, outputFile.extension, outputFile)
-                    outputPath = outputFile.path
-                    mse = evaluateMSE(interpolatedImage, outputImage)
+                coroutineScope.launch {
+                    interpolatedPaths.clear()
+                    outputPaths.clear()
+                    progress = 0f
+                    inputPaths.map {
+                        progress += 1 / inputPaths.size
+                        val inputFile = File(it)
+                        val inputImage = ImageIO.read(inputFile)
+                        val interpolatedImage = inputImage.interpolate()
+                        val interpolatedFile = File(inputFile.parentFile, inputFile.nameWithoutExtension + "-interpolated." + inputFile.extension)
+                        ImageIO.write(interpolatedImage, interpolatedFile.extension, interpolatedFile)
+                        val dataBytes = data.encodeToByteArray()
+                        val outputImage = interpolatedImage.insertData(dataBytes)
+                        val outputFile = File(inputFile.parentFile, inputFile.nameWithoutExtension + "-output." + inputFile.extension)
+                        ImageIO.write(outputImage, outputFile.extension, outputFile)
+                        outputPaths.add(outputFile.path)
+                        mse.add(evaluateMSE(interpolatedImage, outputImage))
+                    }
                 }
             }
         ) {
@@ -135,30 +155,51 @@ fun IntegratingScreen(
                 Text("PSNR = $psnr")
             }
         }
-        Row(
-            modifier = Modifier.width(800.dp)
-        ) {
-            if (inputBitmap != null) {
-                Image(
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(400.dp)
-                        .wrapContentHeight(),
-                    bitmap = inputBitmap,
-                    contentDescription = null
-                )
-            }
-            if (outputBitmap != null) {
-                Image(
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(400.dp)
-                        .wrapContentHeight(),
-                    bitmap = outputBitmap,
-                    contentDescription = null
-                )
+        val scrollState = rememberScrollState()
+        if (interpolatedBitmaps.isNotEmpty()) {
+            Row(
+                modifier = Modifier.width(800.dp)
+                    .horizontalScroll(scrollState),
+            ) {
+                interpolatedBitmaps.forEach {
+                    Image(
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .width(400.dp)
+                            .wrapContentHeight(),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
             }
         }
+        if (outputBitmaps.isNotEmpty()) {
+            Row(
+                modifier = Modifier.width(800.dp)
+                    .horizontalScroll(scrollState),
+            ) {
+                interpolatedBitmaps.forEach {
+                    Image(
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .width(400.dp)
+                            .wrapContentHeight(),
+                        bitmap = it,
+                        contentDescription = null
+                    )
+                }
+            }
+        }
+        if (outputBitmaps.isNotEmpty() || interpolatedBitmaps.isNotEmpty()) {
+            HorizontalScrollbar(
+                adapter = rememberScrollbarAdapter(scrollState),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(screenScrollState),
+            modifier = Modifier.fillMaxHeight()
+        )
     }
 }
 

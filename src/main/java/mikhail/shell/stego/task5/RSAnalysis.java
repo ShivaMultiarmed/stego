@@ -33,7 +33,7 @@ public class RSAnalysis extends PixelBenchmark {
 
     public static RSAnalysis getInstance() {
         if (instance == null) {
-            instance = new RSAnalysis(4, 1);
+            instance = new RSAnalysis(2, 2);
         }
         return instance;
     }

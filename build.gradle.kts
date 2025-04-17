@@ -118,6 +118,26 @@ tasks.create<Jar>("stego4") {
     )
 }
 
+tasks.create<Jar>("stego5") {
+    archiveFileName = "stego-5.jar"
+    manifest {
+        attributes(
+            "Main-Class" to "mikhail.shell.stego.task5.MainKt"
+        )
+    }
+    from(sourceSets.main.get().output) {
+        include("mikhail/shell/stego/task4/**")
+        include("mikhail/shell/stego/task5/**")
+    }
+    dependsOn(configurations.runtimeClasspath)
+    duplicatesStrategy = EXCLUDE
+    from(
+        {
+            configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
+        }
+    )
+}
+
 tasks.test {
     useJUnitPlatform()
 }

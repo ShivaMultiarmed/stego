@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import kotlinx.coroutines.launch
 import mikhail.shell.stego.task5.aump.aumpAnalyzeImage
 import java.awt.FileDialog
 import java.awt.Frame
@@ -90,6 +91,8 @@ fun Tab(
 fun VisualAttackScreen(
     frame: Frame
 ) {
+    var progress by remember { mutableStateOf(1f) }
+    val coroutineScope = rememberCoroutineScope()
     val inputPaths = remember { mutableStateListOf<String>() }
     val inputBitmaps by derivedStateOf {
         inputPaths.map {
@@ -132,8 +135,10 @@ fun VisualAttackScreen(
                 StegoButton(
                     text = "Анализировать",
                     onClick = {
+                        progress = 0f
                         outputBitmaps.clear()
                         inputPaths.forEach {
+                            progress += 1 / inputPaths.size
                             val inputFile = File(it)
                             val inputImage = ImageIO.read(inputFile)
                             val outputImage = inputImage.visualAttack(bitNumber.toInt())
@@ -142,6 +147,7 @@ fun VisualAttackScreen(
                     }
                 )
             }
+            CircularProgressIndicator(progress)
         }
         val scrollState = rememberScrollState()
         if (inputBitmaps.isNotEmpty()) {
@@ -185,6 +191,8 @@ fun VisualAttackScreen(
 fun RSAnalysisScreen(
     frame: Frame
 ) {
+    var progress by remember { mutableStateOf(1f) }
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val inputPaths = remember { mutableStateListOf<String>() }
     val inputBitmaps by derivedStateOf {
@@ -223,20 +231,25 @@ fun RSAnalysisScreen(
             if (inputBitmaps.isNotEmpty()) {
                 StegoButton(
                     onClick = {
-                        p.clear()
-                        val analyzer = RSAnalysis.getInstance()
-                        inputPaths.forEach {
-                            val inputFile = File(it)
-                            val inputImage = ImageIO.read(inputFile)
-                            val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, false)
-                            val R = results[0]
-                            val S = results[1]
-                            p.add(((R - S) / (R + S)).toFloat())
+                        coroutineScope.launch {
+                            progress = 0f
+                            p.clear()
+                            val analyzer = RSAnalysis.getInstance()
+                            inputPaths.forEach {
+                                progress += 1 / inputPaths.size
+                                val inputFile = File(it)
+                                val inputImage = ImageIO.read(inputFile)
+                                val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, true)
+                                val R = results[0]
+                                val S = results[1]
+                                p.add(((R - S) / (R + S)).toFloat())
+                            }
                         }
                     },
                     text = "Анализировать"
                 )
             }
+            CircularProgressIndicator(progress)
         }
         if (inputBitmaps.isNotEmpty()) {
             Row(
@@ -276,6 +289,8 @@ fun RSAnalysisScreen(
 
 @Composable
 fun KhiSquaredScreen(frame: Frame) {
+    val coroutineScope = rememberCoroutineScope()
+    var progress by remember { mutableStateOf(1f) }
     val scrollState = rememberScrollState()
     val inputPaths = remember { mutableStateListOf<String>() }
     val inputBitmaps by derivedStateOf {
@@ -318,19 +333,24 @@ fun KhiSquaredScreen(frame: Frame) {
                     }
                 }
             )
+            CircularProgressIndicator(progress)
             if (inputBitmaps.isNotEmpty()) {
                 StegoButton(
                     onClick = {
-                        khi.clear()
-                        df.clear()
-                        inputPaths.forEach {
-                            val inputFile = File(it)
-                            val inputImage = ImageIO.read(inputFile)
-                            val expected = inputImage.evaluateExpectedColorFrequencies()
-                            val actual = inputImage.evaluateActualColorFrequencies()
-                            val result = evaluateKhiSquared(expected, actual)
-                            khi.add(result.first)
-                            df.add(result.second)
+                        coroutineScope.launch {
+                            progress = 0f
+                            khi.clear()
+                            df.clear()
+                            inputPaths.forEach {
+                                progress += 1 / inputPaths.size
+                                val inputFile = File(it)
+                                val inputImage = ImageIO.read(inputFile)
+                                val expected = inputImage.evaluateExpectedColorFrequencies()
+                                val actual = inputImage.evaluateActualColorFrequencies()
+                                val result = evaluateKhiSquared(expected, actual)
+                                khi.add(result.first)
+                                df.add(result.second)
+                            }
                         }
                     },
                     text = "Анализировать"
@@ -377,6 +397,8 @@ fun KhiSquaredScreen(frame: Frame) {
 fun AumpScreen(
     frame: Frame
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    var progress by remember { mutableStateOf(1f) }
     val scrollState = rememberScrollState()
     Column {
         val inputPaths = remember { mutableStateListOf<String>() }
@@ -415,19 +437,24 @@ fun AumpScreen(
                     }
                 }
             )
+            CircularProgressIndicator(progress)
             if (inputBitmaps.isNotEmpty()) {
                 StegoButton(
                     onClick = {
-                        sp.clear()
-                        triples.clear()
-                        ws.clear()
-                        inputPaths.forEach {
-                            val inputFile = File(it)
-                            val inputImage = ImageIO.read(inputFile)
-                            val analysisResults = aumpAnalyzeImage(inputImage)[2] // беру только синий канал
-                            sp.add(analysisResults[0])
-                            triples.add(analysisResults[1])
-                            ws.add(analysisResults[2])
+                        coroutineScope.launch {
+                            progress = 0f
+                            sp.clear()
+                            triples.clear()
+                            ws.clear()
+                            inputPaths.forEach {
+                                progress += 1 / inputPaths.size
+                                val inputFile = File(it)
+                                val inputImage = ImageIO.read(inputFile)
+                                val analysisResults = aumpAnalyzeImage(inputImage)[2] // беру только синий канал
+                                sp.add(analysisResults[0])
+                                triples.add(analysisResults[1])
+                                ws.add(analysisResults[2])
+                            }
                         }
                     },
                     text = "Анализировать"
