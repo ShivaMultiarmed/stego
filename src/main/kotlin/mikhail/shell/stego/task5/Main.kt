@@ -3,11 +3,8 @@ package mikhail.shell.stego.task5
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,6 +96,7 @@ fun VisualAttackScreen(
             ImageIO.read(File(it)).toComposeImageBitmap()
         }
     }
+    var bitNumber by remember { mutableStateOf(0f) }
     val outputBitmaps = remember { mutableStateListOf<ImageBitmap>() }
     Column {
         Row(
@@ -116,6 +114,20 @@ fun VisualAttackScreen(
                 }
             )
             if (inputBitmaps.isNotEmpty()) {
+                Slider(
+                    modifier = Modifier.width(300.dp),
+                    value = bitNumber,
+                    onValueChange = {
+                        bitNumber = it
+                    },
+                    valueRange = 0f..7f,
+                    steps = 8,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(106, 162, 252),
+                        activeTrackColor = Color(200, 219, 250),
+                        inactiveTickColor = Color(240, 240, 240)
+                    )
+                )
                 StegoButton(
                     text = "Анализировать",
                     onClick = {
@@ -123,7 +135,7 @@ fun VisualAttackScreen(
                         inputPaths.forEach {
                             val inputFile = File(it)
                             val inputImage = ImageIO.read(inputFile)
-                            val outputImage = inputImage.proccess()
+                            val outputImage = inputImage.visualAttack(bitNumber.toInt())
                             outputBitmaps.add(outputImage.toComposeImageBitmap())
                         }
                     }
