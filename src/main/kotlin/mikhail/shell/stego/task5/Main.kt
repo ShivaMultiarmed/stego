@@ -184,10 +184,8 @@ fun RSAnalysisScreen(
         p.map {
             val stringBuilder = StringBuilder()
             stringBuilder.append("P = $it.\n")
-            if (it > 0.2685) {
+            if (it > 0.2671) {
                 stringBuilder.append("В изображении нет стегосообщения.\n")
-            } else if (it in 0.246..0.2685) {
-                stringBuilder.append("В изображении обнаружены отклонения.\n")
             } else {
                 stringBuilder.append("В изображении обнаружено стегосообщение.\n")
             }
@@ -284,12 +282,8 @@ fun KhiSquaredScreen(frame: Frame) {
             val builder = StringBuilder()
             builder.append("Хи-квадрат равен ${khi[i]}.\n")
             builder.append("P равен ${p[i]}.\n")
-            if (p[i] < 0.000045) {
-                builder.append("В изображении точно есть скрытая информация.\n")
-            } else if (p[i] in 0.000045..<0.00623) {
-                builder.append("В изображении может быть скрытая информация.\n")
-            } else if (p[i] in 0.00623..<0.012415) {
-                builder.append("В изображении присутствуют отклонения.\n")
+            if (p[i] < 0.0038) {
+                builder.append("В изображении возможно есть скрытая информация.\n")
             } else {
                 builder.append("В изображении нет скрытой информации.\n")
             }
@@ -386,10 +380,8 @@ fun AumpScreen(
                 val stringBuilder = StringBuilder()
                 stringBuilder.append("ws = ${ws[i]}\n")
                 stringBuilder.append("sp = ${sp[i]}\n")
-                if (ws[i] >= 0.02355 && sp[i] >= 0.064875) {
+                if (sp[i] >= 0.0532) {
                     stringBuilder.append("Присутствуют данные")
-                } else if ((ws[i] >= 0.02355) xor (sp[i] >= 0.064875)) {
-                    stringBuilder.append("Значительные отклонения")
                 } else {
                     stringBuilder.append("Данных нет")
                 }
