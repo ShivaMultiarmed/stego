@@ -378,7 +378,7 @@ fun AumpScreen(
         val resultMessages by derivedStateOf {
             sp.indices.map { i ->
                 val stringBuilder = StringBuilder()
-                stringBuilder.append("ws = ${ws[i]}\n")
+                //stringBuilder.append("ws = ${ws[i]}\n")
                 stringBuilder.append("sp = ${sp[i]}\n")
                 if (sp[i] >= 0.0532) {
                     stringBuilder.append("Присутствуют данные")
