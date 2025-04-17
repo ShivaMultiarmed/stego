@@ -20,17 +20,14 @@ fun sp(X: Array<Array<Int>>): Double {
     var Wc = 0
 
     for ((u, v) in pairs) {
-        // Count Xc
         if ((v % 2.0 == 0.0 && u < v) || (v % 2.0 == 1.0 && u > v)) {
             Xc++
         }
 
-        // Count Zc
         if (u == v) {
             Zc++
         }
 
-        // Count Wc
         val uFloor = floor(u / 2.0)
         val vFloor = floor(v / 2.0)
         if (uFloor == vFloor && u != v) {
@@ -52,7 +49,6 @@ fun sp(X: Array<Array<Int>>): Double {
             val p2 = (-b - sqrtD) / (2 * a)
             minOf(p1, p2)
         } else {
-            // При отрицательном дискриминанте берём вещественную часть корней
             -b / (2 * a)
         }
     } else {
