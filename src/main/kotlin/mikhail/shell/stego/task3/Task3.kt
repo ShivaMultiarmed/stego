@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import mikhail.shell.stego.task5.openFiles
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -68,16 +69,16 @@ fun IntegratingScreen(
     parent: Frame
 ) {
     var data by remember { mutableStateOf("") }
-    var inputFilePath by remember { mutableStateOf(null as String?) }
-    val inputBitmapState = remember(inputFilePath) {
-        inputFilePath?.let { ImageIO.read(File(it)) }?.toComposeImageBitmap()
+    val inputPaths = remember { mutableStateListOf<String>() }
+    val inputBitmaps by derivedStateOf {
+        inputPaths.map { ImageIO.read(File(it)).toComposeImageBitmap() }
     }
-    var outputFilePath by remember { mutableStateOf(null as String?) }
-    val outputBitmapState = remember(outputFilePath) {
-        outputFilePath?.let { ImageIO.read(File(it)) }?.toComposeImageBitmap()
+    val outputPaths = remember { mutableStateListOf<String>() }
+    val outputBitmaps by derivedStateOf {
+        outputPaths.map { ImageIO.read(File(it)).toComposeImageBitmap() }
     }
-    var mse by remember { mutableStateOf(null as Float?) }
-    var psnr by remember { mutableStateOf(null as Float?) }
+    val MSEs = remember { mutableStateListOf<Float>() }
+    val PSNRs = remember { mutableStateListOf<Float>() }
     Column {
         TextField(
             value = data,
@@ -85,63 +86,61 @@ fun IntegratingScreen(
                 data = it
             },
             modifier = Modifier
-                .width(600.dp)
-                .height(400.dp)
+                .width(500.dp)
+                .height(300.dp)
         )
         Button(
             onClick = {
-                inputFilePath = openFile(parent)
+                val selectedFiles = openFiles(parent)
+                if (selectedFiles != null) {
+                    inputPaths.clear()
+                    selectedFiles.forEach(inputPaths::add)
+                }
             }
         ) {
-            Text("Выбрать файл")
+            Text("Выбрать файлы")
         }
         Button(
             onClick = {
-                val inputFileName = inputFilePath?.substringAfterLast("/")
-                val rawFilePath = inputFileName?.substringBeforeLast(".")
-                val extension = inputFileName?.substringAfterLast(".")
-                outputFilePath = "$rawFilePath-output.$extension"
-                if (inputFilePath != null) {
-                    outputFilePath = insertData(inputFilePath!!, data).path
-                    mse = evaluateMSE(File(inputFileName!!), File(outputFilePath!!))
-                    psnr = evaluatePSNR(255f, mse!!)
+                outputPaths.clear()
+                MSEs.clear()
+                PSNRs.clear()
+                inputPaths.forEach {
+                    val inputFile = File(it)
+                    val inputImage = ImageIO.read(inputFile)
+                    val outputImage = inputImage.insertData(data.encodeToByteArray())
+                    val outputFile =
+                        File(inputFile.parentFile, inputFile.nameWithoutExtension + "-output." + inputFile.extension)
+                    ImageIO.write(outputImage, outputFile.extension, outputFile)
+                    outputPaths.add(outputFile.absolutePath)
+                    MSEs.add(evaluateMSE(inputImage, outputImage))
+                    PSNRs.add(evaluatePSNR(255f, MSEs.last()))
                 }
             }
         ) {
             Text("Вставить данные")
         }
-        Column {
-            mse?.let {
-                Text("Вычисленный MSE = $it")
-            }
-            psnr?.let {
-                Text("Вычисленный PSNR = $it")
-            }
+        if (outputPaths.isNotEmpty()) {
             Row {
-                inputBitmapState?.let {
-                    Image(
-                        modifier = Modifier.width(300.dp),
-                        bitmap = it,
-                        contentDescription = null
-                    )
-                }
-                outputBitmapState?.let {
-                    Image(
-                        modifier = Modifier.width(300.dp),
-                        bitmap = it,
-                        contentDescription = null
-                    )
+                for (i in outputPaths.indices) {
+                    Column {
+                        Text("Вычисленный MSE = ${MSEs[i]}")
+                        Text("Вычисленный PSNR = ${PSNRs[i]}")
+                        Image(
+                            modifier = Modifier.width(300.dp),
+                            bitmap = inputBitmaps[i],
+                            contentDescription = null
+                        )
+                        Image(
+                            modifier = Modifier.width(300.dp),
+                            bitmap = outputBitmaps[i],
+                            contentDescription = null
+                        )
+                    }
                 }
             }
         }
     }
-}
-
-fun insertData(inputImage: String, data: String): File {
-    val dataBytes = data.toByteArray()
-    val inputFile = File(inputImage)
-    val outputFile = inputFile.insertData(dataBytes)
-    return outputFile
 }
 
 fun openFile(
@@ -165,22 +164,20 @@ fun ExtractingScreen(parent: Frame) {
         ) {
             Text("Выбрать файл")
         }
-        Button(
-            onClick = {
-                filePath?.let {
-                    result = extractData(it)
+        if (filePath != null) {
+            Button(
+                onClick = {
+                    val file = File(filePath)
+                    val image = ImageIO.read(file)
+                    val extractedBytes = image.extractData()
+                    result = extractedBytes.decodeToString()
                 }
+            ) {
+                Text("Извлечь данные")
             }
-        ) {
-            Text("Извлечь данные")
         }
         if (result != null) {
             Text(result!!)
         }
     }
-}
-
-fun extractData(image: String): String {
-    val file = File(image)
-    return file.extractData().decodeToString()
 }

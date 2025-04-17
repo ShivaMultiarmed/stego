@@ -1,5 +1,7 @@
 package mikhail.shell.stego.task3
 
+import java.awt.image.BufferedImage
+import java.awt.image.DataBufferByte
 import java.io.File
 import java.nio.ByteBuffer
 import kotlin.math.log
@@ -40,7 +42,8 @@ fun Array<Int>.unite(): Int {
     return result
 }
 
-fun File.insertData(byteData: ByteArray): File {
+fun BufferedImage.insertData(byteData: ByteArray): BufferedImage {
+    val outputImage = BufferedImage(width, height, type)
     var currentPairNumber = 0
     val dataLength = byteData.size.let { size ->
         ByteArray(4) { i ->
@@ -49,47 +52,43 @@ fun File.insertData(byteData: ByteArray): File {
     }
     val decomposedData = byteData.decompose()
     val data = dataLength + decomposedData
-    val outputFile = File(parentFile, "$nameWithoutExtension-output.$extension")
 
-    inputStream().use { input ->
-        outputFile.outputStream().use { output ->
-            var initialByte: Int
-            var readByteNumber = 0
-            while (input.read().also { initialByte = it } != -1) {
-                if (currentPairNumber < data.size && readByteNumber >= offset) { // оступ от метаданных
-                    val half = initialByte.half
-                    val Cl = arrayOf((half shr 3) and 1, (half shr 2) and 1)
-                    val Cm = arrayOf((half shr 2) and 1, (half shr 1) and 1)
-                    val Cr = arrayOf((half shr 1) and 1, half and 1)
-                    val Bl = if (Cl.contentEquals(data[currentPairNumber])) {
-                        currentPairNumber++
-                        1
-                    } else {
-                        0
-                    }
-                    val Bm = if (currentPairNumber < data.size && Cm.contentEquals(data[currentPairNumber])) {
-                        currentPairNumber++
-                        1
-                    } else {
-                        0
-                    }
-                    val Br = if (currentPairNumber < data.size && Cr.contentEquals(data[currentPairNumber])) {
-                        currentPairNumber++
-                        1
-                    } else {
-                        0
-                    }
-                    val mappingBits = arrayOf(Bl, Bm, Br).unite()
-                    val newByte = initialByte.modifyByte(mappingBits)
-                    output.write(newByte)
-                } else {
-                    output.write(initialByte)
-                }
-                readByteNumber++
+    val inputBytes = (raster.dataBuffer as DataBufferByte).data
+    val outputBytes = (outputImage.raster.dataBuffer as DataBufferByte).data
+
+    for (i in outputBytes.indices) {
+        val initialByte = inputBytes[i].toInt() and 0xFF
+        if (currentPairNumber < data.size) {
+            val half = initialByte.half
+            val Cl = arrayOf((half shr 3) and 1, (half shr 2) and 1)
+            val Cm = arrayOf((half shr 2) and 1, (half shr 1) and 1)
+            val Cr = arrayOf((half shr 1) and 1, half and 1)
+            val Bl = if (Cl.contentEquals(data[currentPairNumber])) {
+                currentPairNumber++
+                1
+            } else {
+                0
             }
+            val Bm = if (currentPairNumber < data.size && Cm.contentEquals(data[currentPairNumber])) {
+                currentPairNumber++
+                1
+            } else {
+                0
+            }
+            val Br = if (currentPairNumber < data.size && Cr.contentEquals(data[currentPairNumber])) {
+                currentPairNumber++
+                1
+            } else {
+                0
+            }
+            val mappingBits = arrayOf(Bl, Bm, Br).unite()
+            val newByte = initialByte.modifyByte(mappingBits)
+            outputBytes[i] = newByte.toByte()
+        } else {
+            outputBytes[i] = initialByte.toByte()
         }
     }
-    return outputFile
+    return outputImage
 }
 
 // Задаю оператор для индекса по числу
@@ -97,37 +96,29 @@ operator fun Int.get(index: Int): Int {
     return (this shr (7 - index)) and 1
 }
 
-fun File.extractData(): ByteArray {
+fun BufferedImage.extractData(): ByteArray {
     val bits = mutableListOf<Int>()
     var size = 0
-    var byte: Int
     var readByteNumber = 0
-    inputStream().use { input ->
-        while (input.read().also { byte = it } != -1) {
-            if (readByteNumber >= offset) {
-                if (size != 0 && bits.size / 8 >= size) {
-                    break
-                }
-                if (bits.size / 8 >= 4 && size == 0) {
-                    bits.subList(0, 4 * 8).compose().let {
-                        size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt()
-                    }
-                    bits.subList(0, 4 * 8).clear()
-                }
-                val Bl = byte[5]
-                if (Bl == 1) {
-                    bits.addAll(listOf(byte[0], byte[1]))
-                }
-                val Bm = byte[6]
-                if (Bm == 1) {
-                    bits.addAll(listOf(byte[1], byte[2]))
-                }
-                val Br = byte[7]
-                if (Br == 1) {
-                    bits.addAll(listOf(byte[2], byte[3]))
-                }
+    val inputBytes = (raster.dataBuffer as DataBufferByte).data
+    inputBytes.map { it.toInt() and 0xFF }.forEachIndexed { i, byte ->
+        if (bits.size / 8 >= 4 && size == 0) {
+            bits.subList(0, 4 * 8).compose().let {
+                size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt() and 0xFF
             }
-            readByteNumber++
+            bits.subList(0, 4 * 8).clear()
+        }
+        val Bl = byte[5]
+        if (Bl == 1) {
+            bits.addAll(listOf(byte[0], byte[1]))
+        }
+        val Bm = byte[6]
+        if (Bm == 1) {
+            bits.addAll(listOf(byte[1], byte[2]))
+        }
+        val Br = byte[7]
+        if (Br == 1) {
+            bits.addAll(listOf(byte[2], byte[3]))
         }
     }
     return bits.take(size * 8).compose()
@@ -140,23 +131,19 @@ fun List<Int>.compose(): ByteArray {
 }
 
 fun evaluateMSE(
-    file1: File,
-    file2: File
+    inputImage: BufferedImage,
+    outputImage: BufferedImage
 ): Float {
-    val input1 = file1.inputStream()
-    val input2 = file2.inputStream()
+    val inputBytes = (inputImage.raster.dataBuffer as DataBufferByte).data.map { it.toInt() and 0xFF }
+    val outputBytes = (outputImage.raster.dataBuffer as DataBufferByte).data.map { it.toInt() and 0xFF }
 
-    var currentByte1: Int
-    var currentByte2: Int
     var mse = 0.0f
-    while(input1.read().also { currentByte1 = it; } != -1) {
-        currentByte2 = input2.read()
-        mse += (currentByte1 - currentByte2).toDouble().pow(2.0).toFloat()
-    }
-    mse /= file1.length()
 
-    input1.close()
-    input2.close()
+    for (i in inputBytes.indices) {
+        mse += (inputBytes[i] - outputBytes[i]).toDouble().pow(2.0).toFloat()
+    }
+
+    mse /= inputBytes.size
 
     return mse
 }
