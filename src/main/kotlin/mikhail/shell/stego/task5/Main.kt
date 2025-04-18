@@ -10,15 +10,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mikhail.shell.stego.task5.aump.aump
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.util.UUID
 import javax.imageio.ImageIO
 
 fun main(args: Array<String>) = application {
@@ -135,26 +139,31 @@ fun VisualAttackScreen(
                 StegoButton(
                     text = "Анализировать",
                     onClick = {
-                        progress = 0f
-                        outputBitmaps.clear()
-                        inputPaths.forEach {
-                            progress += 1 / inputPaths.size
-                            val inputFile = File(it)
-                            val inputImage = ImageIO.read(inputFile)
-                            val outputImage = inputImage.visualAttack(bitNumber.toInt())
-                            outputBitmaps.add(outputImage.toComposeImageBitmap())
+                        coroutineScope.launch(Dispatchers.IO) {
+                            progress = 0f
+                            outputBitmaps.clear()
+                            inputPaths.forEach {
+                                progress += 1f / inputPaths.size
+                                val inputFile = File(it)
+                                val inputImage = ImageIO.read(inputFile)
+                                val outputImage = inputImage.visualAttack(bitNumber.toInt())
+                                outputBitmaps.add(outputImage.toComposeImageBitmap())
+                                delay(1000)
+                            }
                         }
                     }
                 )
             }
-            CircularProgressIndicator(progress)
+            if (progress < 0.9f) {
+                StegoProgressIndicator(progress)
+            }
         }
         val scrollState = rememberScrollState()
         if (inputBitmaps.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 inputBitmaps.forEachIndexed { i, it ->
                     Image(
@@ -169,7 +178,7 @@ fun VisualAttackScreen(
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 outputBitmaps.forEach {
                     Image(
@@ -202,16 +211,7 @@ fun RSAnalysisScreen(
     }
     val p = remember { mutableStateListOf<Float>() }
     val resultMsgs by derivedStateOf {
-        p.map {
-            val stringBuilder = StringBuilder()
-            stringBuilder.append("P = $it.\n")
-            if (it > 0.2671) {
-                stringBuilder.append("В изображении нет стегосообщения.\n")
-            } else {
-                stringBuilder.append("В изображении обнаружено стегосообщение.\n")
-            }
-            stringBuilder.toString()
-        }
+        p.map { "P = $it.\n" }
     }
     Column {
         Row (
@@ -231,31 +231,43 @@ fun RSAnalysisScreen(
             if (inputBitmaps.isNotEmpty()) {
                 StegoButton(
                     onClick = {
-                        coroutineScope.launch {
+                        coroutineScope.launch(Dispatchers.IO) {
                             progress = 0f
                             p.clear()
                             val analyzer = RSAnalysis.getInstance()
                             inputPaths.forEach {
-                                progress += 1 / inputPaths.size
+                                progress += 1f / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
                                 val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, true)
-                                val R = results[0]
-                                val S = results[1]
-                                p.add(((R - S) / (R + S)).toFloat())
+                                val Rp = results[0]
+                                val Sp = results[1]
+                                val Rn = results[2]
+                                val Sn = results[3]
+                                p.add((((Rp - Sp) - (Rn - Sn)) / (Rp + Sp + Rn + Sn)).toFloat().coerceAtLeast(0f))
+                            }
+                            val uuid = UUID.randomUUID().toString()
+                            val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\rs-results-$uuid.txt")
+                            resultFile.createNewFile()
+                            resultFile.outputStream().bufferedWriter().use {
+                                p.forEachIndexed { i, pValue ->
+                                    it.append("$i\t$pValue\n")
+                                }
                             }
                         }
                     },
                     text = "Анализировать"
                 )
             }
-            CircularProgressIndicator(progress)
+            if (progress < 0.95f) {
+                StegoProgressIndicator(progress)
+            }
         }
         if (inputBitmaps.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 inputBitmaps.forEach {
                     Image(
@@ -270,7 +282,7 @@ fun RSAnalysisScreen(
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 resultMsgs.forEach {
                     Text(
@@ -306,17 +318,7 @@ fun KhiSquaredScreen(frame: Frame) {
         }
     }
     val resultTexts by derivedStateOf {
-        p.indices.map { i ->
-            val builder = StringBuilder()
-            builder.append("Хи-квадрат равен ${khi[i]}.\n")
-            builder.append("P равен ${p[i]}.\n")
-            if (p[i] < 0.0038) {
-                builder.append("В изображении возможно есть скрытая информация.\n")
-            } else {
-                builder.append("В изображении нет скрытой информации.\n")
-            }
-            builder.toString()
-        }
+        p.indices.map { i -> "Хи-квадрат равен ${khi[i]}.\n" }
     }
     Column {
         Row (
@@ -333,16 +335,15 @@ fun KhiSquaredScreen(frame: Frame) {
                     }
                 }
             )
-            CircularProgressIndicator(progress)
             if (inputBitmaps.isNotEmpty()) {
                 StegoButton(
                     onClick = {
-                        coroutineScope.launch {
+                        coroutineScope.launch(Dispatchers.IO) {
                             progress = 0f
                             khi.clear()
                             df.clear()
                             inputPaths.forEach {
-                                progress += 1 / inputPaths.size
+                                progress += 1f / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
                                 val expected = inputImage.evaluateExpectedColorFrequencies()
@@ -351,17 +352,28 @@ fun KhiSquaredScreen(frame: Frame) {
                                 khi.add(result.first)
                                 df.add(result.second)
                             }
+                            val uuid = UUID.randomUUID().toString()
+                            val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\chi2-results-$uuid.txt")
+                            resultFile.createNewFile()
+                            resultFile.outputStream().bufferedWriter().use {
+                                khi.forEachIndexed { i, khi2 ->
+                                    it.append("$i\t$khi2\n")
+                                }
+                            }
                         }
                     },
                     text = "Анализировать"
                 )
+            }
+            if (progress < 0.95f) {
+                StegoProgressIndicator(progress)
             }
         }
         if (inputBitmaps.isNotEmpty()) {
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 inputBitmaps.forEach {
                     Image(
@@ -376,7 +388,7 @@ fun KhiSquaredScreen(frame: Frame) {
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 resultTexts.forEach {
                     Text(
@@ -409,17 +421,7 @@ fun AumpScreen(
         }
         val results = remember { mutableStateListOf<Double>() }
         val resultMessages by derivedStateOf {
-            results.indices.map { i ->
-                val stringBuilder = StringBuilder()
-                //stringBuilder.append("ws = ${ws[i]}\n")
-                stringBuilder.append("sp = ${results[i]}\n")
-                if (results[i] >= 0.0532) {
-                    stringBuilder.append("Присутствуют данные")
-                } else {
-                    stringBuilder.append("Данных нет")
-                }
-                stringBuilder.toString()
-            }
+            results.indices.map { i -> "aump = ${results[i]}\n" }
         }
         Row (
             modifier = Modifier.fillMaxWidth(),
@@ -435,30 +437,40 @@ fun AumpScreen(
                     }
                 }
             )
-            CircularProgressIndicator(progress)
             if (inputBitmaps.isNotEmpty()) {
                 StegoButton(
                     onClick = {
-                        coroutineScope.launch {
+                        coroutineScope.launch(Dispatchers.IO) {
                             progress = 0f
                             results.clear()
                             inputPaths.forEach {
-                                progress += 1 / inputPaths.size
+                                progress += 1f / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
                                 results.add(aump(inputImage))
+                            }
+                            val uuid = UUID.randomUUID().toString()
+                            val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\aump-results-$uuid.txt")
+                            resultFile.createNewFile()
+                            resultFile.outputStream().bufferedWriter().use {
+                                results.forEachIndexed { i, result ->
+                                    it.append("$i\t$result\n")
+                                }
                             }
                         }
                     },
                     text = "Анализировать"
                 )
             }
+            if (progress < 0.95f) {
+                StegoProgressIndicator(progress)
+            }
         }
         if (inputBitmaps.isNotEmpty()) {
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 inputBitmaps.forEach {
                     Image(
@@ -473,7 +485,7 @@ fun AumpScreen(
             Row (
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(scrollState, true),
-                horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 resultMessages.forEach {
                     Text(
@@ -527,4 +539,16 @@ fun openFiles(
     dialog.isMultipleMode = true
     dialog.isVisible = true
     return dialog.files.takeIf { it.isNotEmpty() }?.toList()?.map { it.absolutePath }
+}
+
+@Preview
+@Composable
+fun StegoProgressIndicator(
+    progress: Float
+) {
+    CircularProgressIndicator(
+        progress = progress,
+        backgroundColor = Color.Gray,
+        color = Color(106, 162, 252)
+    )
 }

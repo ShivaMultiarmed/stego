@@ -1,12 +1,7 @@
 package mikhail.shell.stego.task3
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -35,8 +30,6 @@ fun main() = application {
     ) {
         Column(
             modifier = Modifier
-                .width(600.dp)
-                .height(1000.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             Row {
@@ -79,7 +72,10 @@ fun IntegratingScreen(
     }
     val MSEs = remember { mutableStateListOf<Float>() }
     val PSNRs = remember { mutableStateListOf<Float>() }
-    Column {
+    Column(
+        modifier = Modifier
+            //.verticalScroll(rememberScrollState())
+    ) {
         TextField(
             value = data,
             onValueChange = {
@@ -120,8 +116,13 @@ fun IntegratingScreen(
         ) {
             Text("Вставить данные")
         }
+        val scrollState = rememberScrollState()
         if (outputPaths.isNotEmpty()) {
-            Row {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+            ) {
                 for (i in outputPaths.indices) {
                     Column {
                         Text("Вычисленный MSE = ${MSEs[i]}")
@@ -140,6 +141,10 @@ fun IntegratingScreen(
                 }
             }
         }
+        HorizontalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
