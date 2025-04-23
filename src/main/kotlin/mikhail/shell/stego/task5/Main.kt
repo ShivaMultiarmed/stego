@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -251,7 +252,8 @@ fun RSAnalysisScreen(
                             resultFile.createNewFile()
                             resultFile.outputStream().bufferedWriter().use {
                                 p.forEachIndexed { i, pValue ->
-                                    it.append("$i\t$pValue\n")
+                                    val formattedResult = "%.5f".format(java.util.Locale.US, pValue)
+                                    it.append("$i\t$formattedResult\n")
                                 }
                             }
                         }
@@ -357,7 +359,8 @@ fun KhiSquaredScreen(frame: Frame) {
                             resultFile.createNewFile()
                             resultFile.outputStream().bufferedWriter().use {
                                 khi.forEachIndexed { i, khi2 ->
-                                    it.append("$i\t$khi2\n")
+                                    val formattedResult = "%.5f".format(java.util.Locale.US, khi2)
+                                    it.append("$i\t$formattedResult\n")
                                 }
                             }
                         }
@@ -454,7 +457,8 @@ fun AumpScreen(
                             resultFile.createNewFile()
                             resultFile.outputStream().bufferedWriter().use {
                                 results.forEachIndexed { i, result ->
-                                    it.append("$i\t$result\n")
+                                    val formattedResult = "%.5f".format(java.util.Locale.US, result)
+                                    it.append("$i\t$formattedResult\n")
                                 }
                             }
                         }
