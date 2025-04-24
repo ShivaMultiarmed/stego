@@ -212,7 +212,16 @@ fun RSAnalysisScreen(
     }
     val p = remember { mutableStateListOf<Float>() }
     val resultMsgs by derivedStateOf {
-        p.map { "P = $it.\n" }
+        p.map { 
+			val stringBuilder = StringBuilder()
+			stringBuilder.append("P = $it.\n")
+			if (it < 0.05f) {
+				stringBuilder.append("В изображении нет встроенных данных")
+			} else {
+				stringBuilder.append("В изображении содержатся встроенные данные")
+			}
+			stringBuilder.toString()
+		}
     }
     Column {
         Row (
@@ -241,11 +250,8 @@ fun RSAnalysisScreen(
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
                                 val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, true)
-                                val Rp = results[0]
-                                val Sp = results[1]
-                                val Rn = results[2]
-                                val Sn = results[3]
-                                p.add((((Rp - Sp) - (Rn - Sn)) / (Rp + Sp + Rn + Sn)).toFloat().coerceAtLeast(0f))
+                                val percent = results[26]
+                                p.add(percent.toFloat())
                             }
                             val uuid = UUID.randomUUID().toString()
                             val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\rs-results-$uuid.txt")
@@ -313,14 +319,8 @@ fun KhiSquaredScreen(frame: Frame) {
         }
     }
     val khi = remember { mutableStateListOf<Double>() }
-    val df = remember { mutableStateListOf<Int>() }
-    val p by derivedStateOf {
-        khi.indices.map { i ->
-            evaluateP(khi[i], df[i])
-        }
-    }
     val resultTexts by derivedStateOf {
-        p.indices.map { i -> "Хи-квадрат равен ${khi[i]}.\n" }
+        khi.map { "Хи-квадрат равен $it.\n" }
     }
     Column {
         Row (
@@ -343,16 +343,28 @@ fun KhiSquaredScreen(frame: Frame) {
                         coroutineScope.launch(Dispatchers.IO) {
                             progress = 0f
                             khi.clear()
-                            df.clear()
+                            
                             inputPaths.forEach {
                                 progress += 1f / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
-                                val expected = inputImage.evaluateExpectedColorFrequencies()
-                                val actual = inputImage.evaluateActualColorFrequencies()
-                                val result = evaluateKhiSquared(expected, actual)
-                                khi.add(result.first)
-                                df.add(result.second)
+                                val inputPixels = inputImage.getBytes()
+                                val inputMatrix = inputPixels.toMatrix(inputImage.width, inputImage.height)
+                                val inputChunks = inputMatrix.chunk(16)
+                                var resultKhi2 = 0.0
+                                outer@ for (i in inputChunks.indices) {
+                                    for (j in inputChunks[0].indices) {
+                                        val inputChunk = inputChunks[i][j]
+                                        val expected = inputChunk.evaluateExpectedColorFrequencies()
+                                        val actual = inputChunk.evaluateActualColorFrequencies()
+                                        val result = evaluateKhiSquared(expected, actual)
+                                        resultKhi2 = result.first
+                                        if (resultKhi2 > 100) {
+                                            break@outer
+                                        }
+                                    }
+                                }
+                                khi.add(resultKhi2)
                             }
                             val uuid = UUID.randomUUID().toString()
                             val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\chi2-results-$uuid.txt")
