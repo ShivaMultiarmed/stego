@@ -134,7 +134,8 @@ tasks.create<Jar>("hist") {
         )
     }
     from(sourceSets.main.get().output) {
-        include("mikhail/shell/stego/task5/histogram/**")
+        include("mikhail/shell/stego/task4/**")
+        include("mikhail/shell/stego/task5/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
