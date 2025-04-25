@@ -10,16 +10,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import mikhail.shell.stego.task5.aump.aump
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -215,7 +212,7 @@ fun RSAnalysisScreen(
     val resultMsgs by derivedStateOf {
         p.map { 
 			val stringBuilder = StringBuilder()
-			stringBuilder.append("P = $it.\n")
+			stringBuilder.append("P = $it%.\n")
 			if (it < 0.02356f) {
 				stringBuilder.append("В изображении нет встроенных данных")
 			} else {
@@ -448,8 +445,8 @@ fun AumpScreen(
         val resultMessages by derivedStateOf {
             results.indices.map { i ->
                 val stringBuilder = StringBuilder()
-                stringBuilder.append("aump = ${abs(results[i])}\n")
-                if (abs(results[i]) < 0.5) {
+                stringBuilder.append("aump = ${results[i]}\n")
+                if (results[i] < 0.01) {
                     stringBuilder.append("В изображении нет данных.\n")
                 } else {
                     stringBuilder.append("В изображении присутствуют данные.\n")

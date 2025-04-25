@@ -104,7 +104,7 @@ fun BufferedImage.extractData(): ByteArray {
     inputBytes.map { it.toInt() and 0xFF }.forEachIndexed { i, byte ->
         if (bits.size / 8 >= 4 && size == 0) {
             bits.subList(0, 4 * 8).compose().let {
-                size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt() and 0xFF
+                size = (ByteBuffer.wrap(it).int.toLong() and 0xFFFFFFFFL).toInt()
             }
             bits.subList(0, 4 * 8).clear()
         }
