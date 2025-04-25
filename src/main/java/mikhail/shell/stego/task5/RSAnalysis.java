@@ -26,6 +26,9 @@ import java.awt.image.BufferedImage;
 import java.util.Vector;
 import java.util.Enumeration;
 
+import static java.lang.Math.abs;
+import static java.lang.Math.min;
+
 
 public class RSAnalysis extends PixelBenchmark {
 
@@ -273,10 +276,7 @@ public class RSAnalysis extends PixelBenchmark {
             double rootneg = ((-1 * b) - Math.sqrt(discriminant)) / (2 * a);
 
             //return the root with the smallest absolute value (as per paper)
-            if(Math.abs(rootpos) <= Math.abs(rootneg))
-                x = rootpos;
-            else
-                x = rootneg;
+            x = min(abs(rootpos), abs(rootneg));
         }else{
             //maybe it's not the curve we think (straight line)
             double cr = (rm - r) / (r1 - r + rm - rm1);
