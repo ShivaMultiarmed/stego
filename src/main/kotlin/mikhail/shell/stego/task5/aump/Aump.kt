@@ -3,13 +3,14 @@ package mikhail.shell.stego.task5.aump
 import org.apache.commons.math3.linear.*
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 
 fun aump(image: BufferedImage, m: Int = 4, d: Int = 1): Double {
     val pixelMatrix = (image.raster.dataBuffer as DataBufferByte).data
-        .map { it.toInt() and 0xFF }
+        .map { it.toInt() + 128 }
         .toIntArray()
         .to2DArray(image.height, image.width)
     return aump(pixelMatrix, m, d)

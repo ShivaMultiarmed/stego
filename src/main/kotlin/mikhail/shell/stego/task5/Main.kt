@@ -25,6 +25,7 @@ import java.awt.Frame
 import java.io.File
 import java.util.UUID
 import javax.imageio.ImageIO
+import kotlin.math.abs
 
 fun main(args: Array<String>) = application {
     var screen by remember { mutableStateOf(Screen.VISUAL_ATTACK) }
@@ -215,7 +216,7 @@ fun RSAnalysisScreen(
         p.map { 
 			val stringBuilder = StringBuilder()
 			stringBuilder.append("P = $it.\n")
-			if (it < 0.05f) {
+			if (it < 0.02356f) {
 				stringBuilder.append("В изображении нет встроенных данных")
 			} else {
 				stringBuilder.append("В изображении содержатся встроенные данные")
@@ -320,7 +321,16 @@ fun KhiSquaredScreen(frame: Frame) {
     }
     val khi = remember { mutableStateListOf<Double>() }
     val resultTexts by derivedStateOf {
-        khi.map { "Хи-квадрат равен $it.\n" }
+        khi.map {
+            val stringBuilder = StringBuilder()
+            stringBuilder.append("Хи-квадрат равен $it.\n")
+            if (it < 100) {
+                stringBuilder.append("В изображении нет данных.\n")
+            } else {
+                stringBuilder.append("В изображении содержатся данные.\n")
+            }
+            stringBuilder.toString()
+        }
     }
     Column {
         Row (
@@ -343,7 +353,7 @@ fun KhiSquaredScreen(frame: Frame) {
                         coroutineScope.launch(Dispatchers.IO) {
                             progress = 0f
                             khi.clear()
-                            
+
                             inputPaths.forEach {
                                 progress += 1f / inputPaths.size
                                 val inputFile = File(it)
@@ -436,7 +446,16 @@ fun AumpScreen(
         }
         val results = remember { mutableStateListOf<Double>() }
         val resultMessages by derivedStateOf {
-            results.indices.map { i -> "aump = ${results[i]}\n" }
+            results.indices.map { i ->
+                val stringBuilder = StringBuilder()
+                stringBuilder.append("aump = ${abs(results[i])}\n")
+                if (abs(results[i]) < 0.5) {
+                    stringBuilder.append("В изображении нет данных.\n")
+                } else {
+                    stringBuilder.append("В изображении присутствуют данные.\n")
+                }
+                stringBuilder.toString()
+            }
         }
         Row (
             modifier = Modifier.fillMaxWidth(),
