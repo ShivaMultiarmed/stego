@@ -213,7 +213,7 @@ fun RSAnalysisScreen(
         p.map { 
 			val stringBuilder = StringBuilder()
 			stringBuilder.append("P = $it%.\n")
-			if (it < 0.02356f) {
+			if (it < 0.012f) {
 				stringBuilder.append("В изображении нет встроенных данных")
 			} else {
 				stringBuilder.append("В изображении содержатся встроенные данные")
@@ -248,8 +248,12 @@ fun RSAnalysisScreen(
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
                                 val results = analyzer.doAnalysis(inputImage, RSAnalysis.ANALYSIS_COLOUR_BLUE, true)
-                                val percent = results[26]
-                                p.add(percent.toFloat())
+                                val Rp = results[0]
+                                val Sp = results[1]
+                                val Rn = results[2]
+                                val Sn = results[3]
+                                val currentP = abs((Rp - Sp) - (Rn - Sn)) / (Rp + Sp + Rn + Sn)
+                                p.add(currentP.toFloat())
                             }
                             val uuid = UUID.randomUUID().toString()
                             val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\rs-results-$uuid.txt")
@@ -321,7 +325,7 @@ fun KhiSquaredScreen(frame: Frame) {
         khi.map {
             val stringBuilder = StringBuilder()
             stringBuilder.append("Хи-квадрат равен $it.\n")
-            if (it < 100) {
+            if (it < 280) {
                 stringBuilder.append("В изображении нет данных.\n")
             } else {
                 stringBuilder.append("В изображении содержатся данные.\n")
@@ -478,7 +482,8 @@ fun AumpScreen(
                                 progress += 1f / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
-                                results.add(aump(inputImage))
+                                val result = abs(aump(inputImage))
+                                results.add(result)
                             }
                             val uuid = UUID.randomUUID().toString()
                             val resultFile = File(inputPaths[0].substringBeforeLast("\\") + "\\aump-results-$uuid.txt")
