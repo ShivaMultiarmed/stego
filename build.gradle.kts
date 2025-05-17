@@ -77,6 +77,7 @@ tasks.create<Jar>("stego3") {
     from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task3/**")
         include("mikhail/shell/stego/task5/**")
+        include("mikhail/shell/stego/common/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
@@ -96,6 +97,7 @@ tasks.create<Jar>("stego4") {
     }
     from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task4/**")
+        include("mikhail/shell/stego/common/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
@@ -116,6 +118,7 @@ tasks.create<Jar>("stego5") {
     from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task4/**")
         include("mikhail/shell/stego/task5/**")
+        include("mikhail/shell/stego/common/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE
@@ -136,6 +139,7 @@ tasks.create<Jar>("hist") {
     from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task4/**")
         include("mikhail/shell/stego/task5/**")
+        include("mikhail/shell/stego/common/**")
     }
     dependsOn(configurations.runtimeClasspath)
     duplicatesStrategy = EXCLUDE

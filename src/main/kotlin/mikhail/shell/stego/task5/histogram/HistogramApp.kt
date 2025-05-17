@@ -3,7 +3,6 @@ package mikhail.shell.stego.task5.histogram
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,9 +14,9 @@ import io.github.koalaplot.core.bar.*
 import io.github.koalaplot.core.util.ExperimentalKoalaPlotApi
 import io.github.koalaplot.core.xygraph.*
 import mikhail.shell.stego.task4.openFile
-import mikhail.shell.stego.task5.Screen
-import mikhail.shell.stego.task5.StegoButton
-import mikhail.shell.stego.task5.TabRow
+import mikhail.shell.stego.task5.AnalysisScreenTab
+import mikhail.shell.stego.common.StegoButton
+import mikhail.shell.stego.common.TabRow
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -27,7 +26,7 @@ fun main(args: Array<String>) = application {
     Window(
         onCloseRequest = ::exitApplication
     ) {
-        var tab by remember { mutableStateOf(Screen.AUMP) }
+        var tab by remember { mutableStateOf(AnalysisScreenTab.AUMP) }
         var inputPath by remember { mutableStateOf("") }
         val scrollState = rememberScrollState()
         val histogramEntries = remember { mutableStateListOf<Pair<Float,Int>>() }
@@ -37,9 +36,10 @@ fun main(args: Array<String>) = application {
                 .verticalScroll(scrollState)
         ) {
             TabRow(
-                currentTab = tab,
+                checkedTabNumber = tab.ordinal,
+                tabs = AnalysisScreenTab.entries.associate { it.ordinal to it.title },
                 onTabSwitch = {
-                    tab = it
+                    tab = AnalysisScreenTab.entries[it]
                     histogramEntries.clear()
                 }
             )
@@ -63,15 +63,15 @@ fun main(args: Array<String>) = application {
                                 val newResults = evaluateHistEntries(
                                     data = input,
                                     min = when (tab) {
-                                        Screen.RS_ANALYSIS -> 0f
-                                        Screen.KHI_SQUARED -> 10f
-                                        Screen.AUMP -> -1.5f
+                                        AnalysisScreenTab.RS_ANALYSIS -> 0f
+                                        AnalysisScreenTab.KHI_SQUARED -> 10f
+                                        AnalysisScreenTab.AUMP -> -1.5f
                                         else -> return@StegoButton
                                     },
                                     max = when (tab) {
-                                        Screen.RS_ANALYSIS -> 0.5f
-                                        Screen.KHI_SQUARED -> 700f
-                                        Screen.AUMP -> 1.5f
+                                        AnalysisScreenTab.RS_ANALYSIS -> 0.5f
+                                        AnalysisScreenTab.KHI_SQUARED -> 700f
+                                        AnalysisScreenTab.AUMP -> 1.5f
                                         else -> return@StegoButton
                                     },
                                     precision = 10
@@ -90,9 +90,9 @@ fun main(args: Array<String>) = application {
                         .height(600.dp),
                     xAxisModel = FloatLinearAxisModel(
                         range = when (tab) {
-                            Screen.RS_ANALYSIS -> 0f..0.5f
-                            Screen.KHI_SQUARED -> 0f..1000f
-                            Screen.AUMP -> -1.7f..1.7f
+                            AnalysisScreenTab.RS_ANALYSIS -> 0f..0.5f
+                            AnalysisScreenTab.KHI_SQUARED -> 0f..1000f
+                            AnalysisScreenTab.AUMP -> -1.7f..1.7f
                             else -> return@Column
                         }
                     ),

@@ -1,9 +1,7 @@
 package mikhail.shell.stego.task5
 
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,76 +15,38 @@ import androidx.compose.ui.window.application
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.FileDialog
+import mikhail.shell.stego.common.StegoButton
+import mikhail.shell.stego.common.StegoProgressIndicator
+import mikhail.shell.stego.common.openFiles
 import java.awt.Frame
 import java.io.File
-import java.util.UUID
+import java.util.*
 import javax.imageio.ImageIO
 import kotlin.math.abs
 
 fun main(args: Array<String>) = application {
-    var screen by remember { mutableStateOf(Screen.VISUAL_ATTACK) }
+    var checkedTabNumber by remember { mutableStateOf(0) }
+    val analysisScreenTab by derivedStateOf { AnalysisScreenTab.entries[checkedTabNumber] }
     Window(
         onCloseRequest = ::exitApplication,
-        title = screen.title,
+        title = analysisScreenTab.title,
     ) {
         Column {
-            TabRow(
+            mikhail.shell.stego.common.TabRow(
                 modifier = Modifier.fillMaxWidth(),
-                currentTab = screen,
+                checkedTabNumber = checkedTabNumber,
+                tabs = AnalysisScreenTab.entries.associate { it.ordinal to it.title },
                 onTabSwitch = {
-                    screen = it
+                    checkedTabNumber = it
                 }
             )
-            when (screen) {
-                Screen.VISUAL_ATTACK -> VisualAttackScreen(window)
-                Screen.KHI_SQUARED -> KhiSquaredScreen(window)
-                Screen.RS_ANALYSIS -> RSAnalysisScreen(window)
-                Screen.AUMP -> AumpScreen(window)
+            when (analysisScreenTab) {
+                AnalysisScreenTab.VISUAL_ATTACK -> VisualAttackScreen(window)
+                AnalysisScreenTab.KHI_SQUARED -> KhiSquaredScreen(window)
+                AnalysisScreenTab.RS_ANALYSIS -> RSAnalysisScreen(window)
+                AnalysisScreenTab.AUMP -> AumpScreen(window)
             }
         }
-    }
-}
-
-@Composable
-fun TabRow(
-    modifier: Modifier = Modifier,
-    currentTab: Screen,
-    onTabSwitch: (screen: Screen) -> Unit
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Screen.entries.forEach { screen ->
-            Tab(
-                screen = screen,
-                checked = currentTab == screen,
-                onClick = {
-                    onTabSwitch(screen)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun Tab(
-    screen: Screen,
-    checked: Boolean,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = if (checked) Color.White else Color(230, 230, 230),
-            backgroundColor = if (checked) Color(40, 83, 153) else Color.White
-        ),
-        shape = RoundedCornerShape(0.dp, 0.dp, 10.dp, 10.dp)
-    ) {
-        Text(
-            text = screen.title
-        )
     }
 }
 
@@ -260,7 +220,7 @@ fun RSAnalysisScreen(
                             resultFile.createNewFile()
                             resultFile.outputStream().bufferedWriter().use {
                                 p.forEachIndexed { i, pValue ->
-                                    val formattedResult = "%.5f".format(java.util.Locale.US, pValue)
+                                    val formattedResult = "%.5f".format(Locale.US, pValue)
                                     it.append("$i\t$formattedResult\n")
                                 }
                             }
@@ -382,7 +342,7 @@ fun KhiSquaredScreen(frame: Frame) {
                             resultFile.createNewFile()
                             resultFile.outputStream().bufferedWriter().use {
                                 khi.forEachIndexed { i, khi2 ->
-                                    val formattedResult = "%.5f".format(java.util.Locale.US, khi2)
+                                    val formattedResult = "%.5f".format(Locale.US, khi2)
                                     it.append("$i\t$formattedResult\n")
                                 }
                             }
@@ -450,7 +410,7 @@ fun AumpScreen(
             results.indices.map { i ->
                 val stringBuilder = StringBuilder()
                 stringBuilder.append("aump = ${results[i]}\n")
-                if (results[i] < 0.01) {
+                if (results[i] < 0.98) {
                     stringBuilder.append("В изображении нет данных.\n")
                 } else {
                     stringBuilder.append("В изображении присутствуют данные.\n")
@@ -482,7 +442,7 @@ fun AumpScreen(
                                 progress += 1f / inputPaths.size
                                 val inputFile = File(it)
                                 val inputImage = ImageIO.read(inputFile)
-                                val result = abs(aump(inputImage))
+                                val result = abs(aump(inputImage, 16, 2))
                                 results.add(result)
                             }
                             val uuid = UUID.randomUUID().toString()
@@ -490,7 +450,7 @@ fun AumpScreen(
                             resultFile.createNewFile()
                             resultFile.outputStream().bufferedWriter().use {
                                 results.forEachIndexed { i, result ->
-                                    val formattedResult = "%.5f".format(java.util.Locale.US, result)
+                                    val formattedResult = "%.5f".format(Locale.US, result)
                                     it.append("$i\t$formattedResult\n")
                                 }
                             }
@@ -539,53 +499,10 @@ fun AumpScreen(
     }
 }
 
-enum class Screen(val title: String) {
+enum class AnalysisScreenTab(val title: String) {
     VISUAL_ATTACK("Визуальная атака"),
     RS_ANALYSIS("RS-анализ"),
     KHI_SQUARED("Хи-квадрат"),
     AUMP("AUMP")
 }
 
-@Preview
-@Composable
-
-fun StegoButton(
-    modifier: Modifier = Modifier,
-    text: String,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = Color.White,
-            backgroundColor = Color(106, 162, 252)
-        ),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Text(
-            text = text
-        )
-    }
-}
-
-fun openFiles(
-    parent: Frame,
-    title: String = "Выберите файлы"
-): List<String>? {
-    val dialog = FileDialog(parent, title, FileDialog.LOAD)
-    dialog.isMultipleMode = true
-    dialog.isVisible = true
-    return dialog.files.takeIf { it.isNotEmpty() }?.toList()?.map { it.absolutePath }
-}
-
-@Preview
-@Composable
-fun StegoProgressIndicator(
-    progress: Float
-) {
-    CircularProgressIndicator(
-        progress = progress,
-        backgroundColor = Color.Gray,
-        color = Color(106, 162, 252)
-    )
-}

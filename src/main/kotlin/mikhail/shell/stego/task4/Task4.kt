@@ -2,31 +2,31 @@ package mikhail.shell.stego.task4
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.launch
-import mikhail.shell.stego.task5.openFiles
+import mikhail.shell.stego.common.StegoButton
+import mikhail.shell.stego.common.openFiles
+import mikhail.shell.stego.common.TabRow
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import javax.imageio.ImageIO
 
 fun main() = application {
-    var screen by remember { mutableStateOf(ChosenScreen.INTEGRATING_SCREEN) }
+    var screen by remember { mutableStateOf(InterpolatingScreen.INTEGRATING_SCREEN) }
     Window(
         onCloseRequest = ::exitApplication,
         title = when (screen) {
-            ChosenScreen.INTEGRATING_SCREEN -> "Внедрение данных"
+            InterpolatingScreen.INTEGRATING_SCREEN -> "Внедрение данных"
             else -> "Извлечение данных"
         }
     ) {
@@ -40,7 +40,7 @@ fun main() = application {
     }
 }
 
-enum class ChosenScreen(val title: String) {
+enum class InterpolatingScreen(val title: String) {
     INTEGRATING_SCREEN("Вставка данных"),
     EXTRACTING_SCREEN("Извлечение данных")
 }
@@ -48,27 +48,25 @@ enum class ChosenScreen(val title: String) {
 @Composable
 fun App(
     parent: Frame,
-    screen: ChosenScreen,
-    onScreenSwitch: (ChosenScreen) -> Unit
+    screen: InterpolatingScreen,
+    onScreenSwitch: (InterpolatingScreen) -> Unit
 ) {
+    var tabIndex by remember { mutableStateOf(0) }
+    val tabScreen by derivedStateOf { InterpolatingScreen.entries[tabIndex] }
     Box(
         modifier = Modifier
     ) {
         Column {
-            Row {
-                Button(
-                    onClick = { onScreenSwitch(ChosenScreen.INTEGRATING_SCREEN) }
-                ) {
-                    Text("Внедрить")
+            TabRow(
+                tabs = InterpolatingScreen.entries.associate { it.ordinal to it.title },
+                checkedTabNumber = tabIndex,
+                onTabSwitch = {
+                    tabIndex = it
+                    onScreenSwitch(tabScreen)
                 }
-                Button(
-                    onClick = { onScreenSwitch(ChosenScreen.EXTRACTING_SCREEN) }
-                ) {
-                    Text("Извлечь")
-                }
-            }
+            )
             Box {
-                if (screen == ChosenScreen.INTEGRATING_SCREEN) {
+                if (screen == InterpolatingScreen.INTEGRATING_SCREEN) {
                     IntegratingScreen(parent)
                 } else {
                     ExtractingScreen(parent)
@@ -86,8 +84,8 @@ fun IntegratingScreen(
     val coroutineScope = rememberCoroutineScope()
     var progress by remember { mutableStateOf(1f) }
     Column(
-        modifier = Modifier.fillMaxSize()
-            .verticalScroll(screenScrollState)
+        modifier = Modifier
+        //.verticalScroll(screenScrollState)
     ) {
         val inputPaths = remember { mutableStateListOf<String>() }
         val interpolatedPaths = remember { mutableStateListOf<String>() }
@@ -102,27 +100,27 @@ fun IntegratingScreen(
         val mse = remember { mutableStateListOf<Float>() }
         val psnr = derivedStateOf { mse.map { evaluatePSNR(255f, it) } }
         Row {
-            Button(
+            StegoButton (
                 onClick = {
-                    val selectedFiles = openFiles(parent, if (inputPaths.isEmpty()) "Выберите изображения" else "Измените изображения")
+                    val selectedFiles =
+                        openFiles(parent, if (inputPaths.isEmpty()) "Выберите изображения" else "Измените изображения")
                     if (selectedFiles != null) {
                         inputPaths.clear()
                         selectedFiles.forEach(inputPaths::add)
                     }
-                }
-            ) {
-                Text(
-                    text = if (inputPaths.isEmpty()) "Выберите изображение" else "Измените изображение"
-                )
+                },
+                text = if (inputPaths.isEmpty()) "Выберите изображение" else "Измените изображение"
+            )
+            if (progress < 0.95f) {
+                CircularProgressIndicator(progress)
             }
-            CircularProgressIndicator(progress)
         }
         TextField(
             modifier = Modifier.size(400.dp, 200.dp),
             value = data,
             onValueChange = { data = it }
         )
-        Button(
+        StegoButton(
             onClick = {
                 coroutineScope.launch {
                     interpolatedPaths.clear()
@@ -133,28 +131,25 @@ fun IntegratingScreen(
                         val inputFile = File(it)
                         val inputImage = ImageIO.read(inputFile)
                         val interpolatedImage = inputImage.interpolate()
-                        val interpolatedFile = File(inputFile.parentFile, inputFile.nameWithoutExtension + "-interpolated." + inputFile.extension)
+                        val interpolatedFile = File(
+                            inputFile.parentFile,
+                            inputFile.nameWithoutExtension + "-interpolated." + inputFile.extension
+                        )
                         ImageIO.write(interpolatedImage, interpolatedFile.extension, interpolatedFile)
                         val dataBytes = data.encodeToByteArray()
                         val outputImage = interpolatedImage.insertData(dataBytes)
-                        val outputFile = File(inputFile.parentFile, inputFile.nameWithoutExtension + "-output." + inputFile.extension)
+                        val outputFile = File(
+                            inputFile.parentFile,
+                            inputFile.nameWithoutExtension + "-output." + inputFile.extension
+                        )
                         ImageIO.write(outputImage, outputFile.extension, outputFile)
                         outputPaths.add(outputFile.path)
                         mse.add(evaluateMSE(interpolatedImage, outputImage))
                     }
                 }
-            }
-        ) {
-            Text(
-                text = "Внедрить данные"
-            )
-        }
-        if (mse != null) {
-            Column {
-                Text("MSE = $mse")
-                Text("PSNR = $psnr")
-            }
-        }
+            },
+            text = "Внедрить данные"
+        )
         val scrollState = rememberScrollState()
         if (interpolatedBitmaps.isNotEmpty()) {
             Row(
@@ -175,7 +170,8 @@ fun IntegratingScreen(
         }
         if (outputBitmaps.isNotEmpty()) {
             Row(
-                modifier = Modifier.width(800.dp)
+                modifier = Modifier
+                    .width(800.dp)
                     .horizontalScroll(scrollState),
             ) {
                 interpolatedBitmaps.forEach {
@@ -210,19 +206,17 @@ fun ExtractingScreen(
     Column {
         var inputPath by remember { mutableStateOf(null as String?) }
         var extractedData by remember { mutableStateOf(null as String?) }
-        Button(
+        StegoButton(
             onClick = {
-                val selectedFile = openFile(parent, if (inputPath == null) "Выберите изображение" else "Измените изображение")
+                val selectedFile =
+                    openFile(parent, if (inputPath == null) "Выберите изображение" else "Измените изображение")
                 if (selectedFile != null) {
                     inputPath = selectedFile
                 }
-            }
-        ) {
-            Text(
-                text = if (inputPath == null) "Выберите изображение" else "Измените изображение"
-            )
-        }
-        Button(
+            },
+            text = if (inputPath == null) "Выберите изображение" else "Измените изображение"
+        )
+        StegoButton (
             onClick = {
                 inputPath?.let {
                     val inputFile = File(it)
@@ -230,12 +224,9 @@ fun ExtractingScreen(
                     val extractedBytes = inputImage.extractData()
                     extractedData = extractedBytes.decodeToString()
                 }
-            }
-        ) {
-            Text(
-                text = "Извлечь данные"
-            )
-        }
+            },
+            text = "Извлечь данные"
+        )
         extractedData?.let {
             Text(it)
         }

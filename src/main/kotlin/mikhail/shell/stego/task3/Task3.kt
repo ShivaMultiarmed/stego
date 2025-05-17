@@ -2,7 +2,6 @@ package mikhail.shell.stego.task3
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
@@ -11,44 +10,38 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import mikhail.shell.stego.task5.openFiles
+import mikhail.shell.stego.common.StegoButton
+import mikhail.shell.stego.common.TabRow
+import mikhail.shell.stego.common.openFiles
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import javax.imageio.ImageIO
 
-enum class ChosenScreen(val title: String) {
+enum class StegoIntegrationScreen(val title: String) {
     INTEGRATING_SCREEN("Вставка данных"),
     EXTRACTING_SCREEN("Извлечение данных")
 }
 
 fun main() = application {
-    var chosenScreen by remember { mutableStateOf(ChosenScreen.INTEGRATING_SCREEN) }
+    var checkedTabIndex by remember { mutableStateOf(0) }
+    val stegoIntegrationScreen by derivedStateOf { StegoIntegrationScreen.entries[checkedTabIndex] }
     Window(
-        title = chosenScreen.title,
+        title = stegoIntegrationScreen.title,
         onCloseRequest = this::exitApplication
     ) {
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
         ) {
-            Row {
-                Button(
-                    onClick = {
-                        chosenScreen = ChosenScreen.INTEGRATING_SCREEN
-                    }
-                ) {
-                    Text("Вставка")
+            TabRow(
+                tabs = StegoIntegrationScreen.entries.associate { it.ordinal to it.title },
+                checkedTabNumber = checkedTabIndex,
+                onTabSwitch = {
+                    checkedTabIndex = it
                 }
-                Button(
-                    onClick = {
-                        chosenScreen = ChosenScreen.EXTRACTING_SCREEN
-                    }
-                ) {
-                    Text("Извлечение")
-                }
-            }
-            if (chosenScreen == ChosenScreen.INTEGRATING_SCREEN) {
+            )
+            if (stegoIntegrationScreen == StegoIntegrationScreen.INTEGRATING_SCREEN) {
                 IntegratingScreen(window)
             } else {
                 ExtractingScreen(window)
@@ -85,18 +78,17 @@ fun IntegratingScreen(
                 .width(500.dp)
                 .height(300.dp)
         )
-        Button(
+        StegoButton (
             onClick = {
                 val selectedFiles = openFiles(parent)
                 if (selectedFiles != null) {
                     inputPaths.clear()
                     selectedFiles.forEach(inputPaths::add)
                 }
-            }
-        ) {
-            Text("Выбрать файлы")
-        }
-        Button(
+            },
+            text = "Выбрать файлы"
+        )
+        StegoButton(
             onClick = {
                 outputPaths.clear()
                 MSEs.clear()
@@ -112,10 +104,9 @@ fun IntegratingScreen(
                     MSEs.add(evaluateMSE(inputImage, outputImage))
                     PSNRs.add(evaluatePSNR(255f, MSEs.last()))
                 }
-            }
-        ) {
-            Text("Вставить данные")
-        }
+            },
+            text = "Вставить данные"
+        )
         val scrollState = rememberScrollState()
         if (outputPaths.isNotEmpty()) {
             Row(
@@ -162,24 +153,22 @@ fun ExtractingScreen(parent: Frame) {
     var filePath by remember { mutableStateOf(null as String?) }
     var result by remember { mutableStateOf<String?>(null) }
     Column {
-        Button(
+        StegoButton(
             onClick = {
                 filePath = openFile(parent)
-            }
-        ) {
-            Text("Выбрать файл")
-        }
+            },
+            text = "Выбрать файл"
+        )
         if (filePath != null) {
-            Button(
+            StegoButton(
                 onClick = {
                     val file = File(filePath)
                     val image = ImageIO.read(file)
                     val extractedBytes = image.extractData()
                     result = extractedBytes.decodeToString()
-                }
-            ) {
-                Text("Извлечь данные")
-            }
+                },
+                text = "Извлечь данные"
+            )
         }
         if (result != null) {
             Text(result!!)
