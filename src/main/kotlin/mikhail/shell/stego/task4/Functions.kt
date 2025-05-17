@@ -3,7 +3,6 @@ package mikhail.shell.stego.task4
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
-import java.io.File
 import kotlin.math.*
 
 operator fun Byte.get(index: Int): Byte {
@@ -132,8 +131,8 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
     var bitNum = 0
     val bits = (dataLength + data).decompose().toTypedArray()
     val blocks = formattedInput.chunk()
-    for (i in blocks.indices) {
-        for (j in blocks[0].indices) {
+    for (i in 1 until blocks.size - 1) {
+        for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
             val m00 = block[0][0]
             for (r in 0..1) {
@@ -186,15 +185,15 @@ fun BufferedImage.extractData(): ByteArray {
     var bitNum = 0
     var dataLength: Int? = null
     val blocks = arrangedInput.chunk()
-    outer@ for (i in 0 until blocks.size - 1) {
-        for (j in 0 until blocks[0].size - 1) {
+    outer@ for (i in 1 until blocks.size - 1) {
+        for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
             val right = blocks[i][j + 1]
             val bottom = blocks[i + 1][j]
             if (dataLength == null && bitNum >= 8 * 4) {
-                dataLength = bits.subList(0, 8 * 4).map { it.toString() }.joinToString("").toInt(2)
+                dataLength = bits.subList(0, 8 * 4).joinToString("") { it.toString() }.toInt(2)
                 bits.subList(0, 4 * 8).clear()
-                bitNum -= dataLength * 8
+                bitNum -= 4 * 8
             }
             if (dataLength != null) {
                 if (bitNum >= dataLength * 8) {
