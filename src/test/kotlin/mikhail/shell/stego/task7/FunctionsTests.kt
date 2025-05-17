@@ -32,4 +32,19 @@ class FunctionsTests {
         val actualBits = unhash(expectedHash)
         Assertions.assertArrayEquals(bits, actualBits)
     }
+
+    @Test
+    fun testHammingEncoding() {
+        val bits = byteArrayOf(1, 0, 0, 0).toTypedArray()
+        val parityMatrix = arrayOf(
+            byteArrayOf(1, 1, 1, 0, 1, 0, 0),
+            byteArrayOf(1, 0, 0, 1, 0, 1, 0),
+            byteArrayOf(0, 1, 0, 1, 0, 0, 1)
+        )
+            .map { it.toTypedArray() }
+            .toTypedArray()
+        val expectedCode = byteArrayOf(1, 0, 0, 0, 1, 1, 0).toTypedArray()
+        val actualCode = encode(parityMatrix, bits)
+        Assertions.assertArrayEquals(expectedCode, actualCode)
+    }
 }

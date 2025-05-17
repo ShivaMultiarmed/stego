@@ -1,5 +1,7 @@
 package mikhail.shell.stego.task7
 
+import kotlin.experimental.xor
+
 inline operator fun <reified T : Number> Array<Array<T>>.times(other: Array<Array<T>>): Array<Array<T>> {
     require(this.isNotEmpty() && other.isNotEmpty()) { "Одна или обе матрицы пустые" }
     require(this[0].size == other.size) { "Количество строк в первой матрице не совпадает с количеством столбцов во второй." }
@@ -55,4 +57,16 @@ fun unhash(bits: Array<Byte>): Array<Byte> {
             row -> row.map { it.toByte() }.toTypedArray()
     }.toTypedArray()
     return hash(unhashMatrix, bits)
+}
+fun encode(parityMatrix: Array<Array<Byte>>, bits: Array<Byte>): Array<Byte> {
+    val verificationBitsCount = parityMatrix[0].size - bits.size
+    val verificationBits = ByteArray(verificationBitsCount).toTypedArray()
+    for (i in parityMatrix.indices) {
+        for (j in bits.indices) {
+            if (parityMatrix[i][j].toInt() == 1) {
+                verificationBits[i] = bits[j] xor verificationBits[i]
+            }
+        }
+    }
+    return bits + verificationBits
 }
