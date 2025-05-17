@@ -53,27 +53,29 @@ fun App(
 ) {
     var tabIndex by remember { mutableStateOf(0) }
     val tabScreen by derivedStateOf { InterpolatingScreen.entries[tabIndex] }
-    Box(
-        modifier = Modifier
+    Column(
+        modifier = Modifier.fillMaxSize()
     ) {
-        Column {
-            TabRow(
-                tabs = InterpolatingScreen.entries.associate { it.ordinal to it.title },
-                checkedTabNumber = tabIndex,
-                onTabSwitch = {
-                    tabIndex = it
-                    onScreenSwitch(tabScreen)
-                }
-            )
-            Box {
-                if (screen == InterpolatingScreen.INTEGRATING_SCREEN) {
-                    IntegratingScreen(parent)
-                } else {
-                    ExtractingScreen(parent)
-                }
+        TabRow(
+            modifier = Modifier.fillMaxWidth(),
+            tabs = InterpolatingScreen.entries.associate { it.ordinal to it.title },
+            checkedTabNumber = tabIndex,
+            onTabSwitch = {
+                tabIndex = it
+                onScreenSwitch(tabScreen)
+            }
+        )
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            if (screen == InterpolatingScreen.INTEGRATING_SCREEN) {
+                IntegratingScreen(parent)
+            } else {
+                ExtractingScreen(parent)
             }
         }
     }
+
 }
 
 @Composable
@@ -85,7 +87,8 @@ fun IntegratingScreen(
     var progress by remember { mutableStateOf(1f) }
     Column(
         modifier = Modifier
-        //.verticalScroll(screenScrollState)
+            .fillMaxSize()
+            .verticalScroll(screenScrollState)
     ) {
         val inputPaths = remember { mutableStateListOf<String>() }
         val interpolatedPaths = remember { mutableStateListOf<String>() }
@@ -99,8 +102,10 @@ fun IntegratingScreen(
         var data by remember { mutableStateOf("") }
         val mse = remember { mutableStateListOf<Float>() }
         val psnr = derivedStateOf { mse.map { evaluatePSNR(255f, it) } }
-        Row {
-            StegoButton (
+        Row(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            StegoButton(
                 onClick = {
                     val selectedFiles =
                         openFiles(parent, if (inputPaths.isEmpty()) "Выберите изображения" else "Измените изображения")
@@ -153,11 +158,13 @@ fun IntegratingScreen(
             },
             text = "Внедрить данные"
         )
-        val scrollState = rememberScrollState()
+        val imagesScrollState = rememberScrollState()
         if (interpolatedBitmaps.isNotEmpty()) {
             Row(
-                modifier = Modifier.width(800.dp)
-                    .horizontalScroll(scrollState),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .horizontalScroll(imagesScrollState),
             ) {
                 interpolatedBitmaps.forEach {
                     Image(
@@ -174,8 +181,9 @@ fun IntegratingScreen(
         if (outputBitmaps.isNotEmpty()) {
             Row(
                 modifier = Modifier
-                    .width(800.dp)
-                    .horizontalScroll(scrollState),
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .horizontalScroll(imagesScrollState),
             ) {
                 interpolatedBitmaps.forEach {
                     Image(
@@ -191,22 +199,29 @@ fun IntegratingScreen(
         }
         if (outputBitmaps.isNotEmpty() || interpolatedBitmaps.isNotEmpty()) {
             HorizontalScrollbar(
-                adapter = rememberScrollbarAdapter(scrollState),
+                adapter = rememberScrollbarAdapter(imagesScrollState),
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        VerticalScrollbar(
-            adapter = rememberScrollbarAdapter(screenScrollState),
-            modifier = Modifier.fillMaxHeight()
-        )
+
     }
+    VerticalScrollbar(
+        adapter = rememberScrollbarAdapter(screenScrollState),
+        modifier = Modifier
+            .fillMaxHeight()
+    )
 }
 
 @Composable
 fun ExtractingScreen(
     parent: Frame
 ) {
-    Column {
+    val screenScrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(screenScrollState)
+    ) {
         var inputPath by remember { mutableStateOf(null as String?) }
         var extractedData by remember { mutableStateOf(null as String?) }
         StegoButton(
@@ -219,7 +234,7 @@ fun ExtractingScreen(
             },
             text = if (inputPath == null) "Выберите изображение" else "Измените изображение"
         )
-        StegoButton (
+        StegoButton(
             onClick = {
                 inputPath?.let {
                     val inputFile = File(it)
@@ -237,6 +252,11 @@ fun ExtractingScreen(
             Text(it)
         }
     }
+    VerticalScrollbar(
+        adapter = rememberScrollbarAdapter(screenScrollState),
+        modifier = Modifier
+            .fillMaxHeight()
+    )
 }
 
 fun openFile(

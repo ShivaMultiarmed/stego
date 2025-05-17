@@ -4,7 +4,7 @@ import kotlin.experimental.xor
 
 inline operator fun <reified T : Number> Array<Array<T>>.times(other: Array<Array<T>>): Array<Array<T>> {
     require(this.isNotEmpty() && other.isNotEmpty()) { "Одна или обе матрицы пустые" }
-    require(this[0].size == other.size) { "Количество строк в первой матрице не совпадает с количеством столбцов во второй." }
+    require(this[0].size == other.size) { "Количество столбцов в первой матрице не совпадает с количеством строк во второй." }
     val result = Array(this.size) { Array(other[0].size) { 0f } }
     for (i in this.indices) {
         for (j in other[0].indices) {
@@ -69,4 +69,12 @@ fun encode(parityMatrix: Array<Array<Byte>>, bits: Array<Byte>): Array<Byte> {
         }
     }
     return bits + verificationBits
+}
+fun decode(informationalBitsCount: Int, bits: Array<Byte>) = bits.sliceArray(0 until informationalBitsCount)
+inline fun <reified T> Array<T>.toVector(): Array<Array<T>> {
+    return Array(size) { index ->
+        Array(1) {
+            this[index]
+        }
+    }
 }

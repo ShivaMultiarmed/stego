@@ -1,5 +1,6 @@
 package mikhail.shell.stego.task4
 
+import mikhail.shell.stego.task7.*
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
@@ -119,15 +120,39 @@ fun BufferedImage.interpolate(): BufferedImage {
     return output
 }
 
-
+fun encode(bits: Array<Byte>): Array<Byte> {
+    val parityMatrix = arrayOf(
+        byteArrayOf(1, 1, 1, 0, 1, 0, 0),
+        byteArrayOf(1, 0, 0, 1, 0, 1, 0),
+        byteArrayOf(0, 1, 0, 1, 0, 0, 1)
+    ).map { it.toTypedArray() }.toTypedArray()
+    return encode(parityMatrix, bits)
+}
+fun decode(bits: Array<Byte>): Array<Byte> {
+    return decode(4, bits)
+}
 
 fun BufferedImage.insertData(data: ByteArray): BufferedImage {
     val dataLength = data.size.toByteArray()
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
     val formattedInput = inputBuffer.arrange(width, height)
     var bitNum = 0
-    val bits = (dataLength + data).decompose().toTypedArray()
-    val blocks = formattedInput.chunk()
+    var bits = (dataLength + data).decompose().toTypedArray()
+    bits = bits.toList().windowed(
+        size = 4,
+        step = 4,
+        partialWindows = true
+    ) {
+        hash(it.toTypedArray()).toList()
+    }.flatten().toTypedArray()
+//    val encodedBits = bits.toList().windowed(
+//        size = 4,
+//        step = 1,
+//        partialWindows = true
+//    ) {
+//        encode(it.toTypedArray())
+//    }
+    val blocks = formattedInput.chunk(side = 2)
     for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
@@ -176,19 +201,26 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
 
 fun BufferedImage.extractData(): ByteArray {
     val K = 2
-    val bits = mutableListOf<Byte>()
+    var bits = mutableListOf<Byte>()
     val arrangedInput = (raster.dataBuffer as DataBufferByte).data
         .arrange(width, height)
     var bitNum = 0
     var dataLength: Int? = null
-    val blocks = arrangedInput.chunk()
+    val blocks = arrangedInput.chunk(side = 2)
     outer@ for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
             val right = blocks[i][j + 1]
             val bottom = blocks[i + 1][j]
             if (dataLength == null && bitNum >= 8 * 4) {
-                dataLength = bits.subList(0, 8 * 4).joinToString("") { it.toString() }.toInt(2)
+                val dataLengthBits = bits.subList(0, 8 * 4).windowed(
+                    size = 4,
+                    step = 4,
+                    partialWindows = false
+                ) {
+                    unhash(it.toTypedArray()).toList()
+                }.flatten().toMutableList()
+                dataLength = dataLengthBits.joinToString("").toInt(2)
                 bits.subList(0, 4 * 8).clear()
                 bitNum -= 4 * 8
             }
@@ -223,7 +255,15 @@ fun BufferedImage.extractData(): ByteArray {
             }
         }
     }
-    return bits.subList(0, dataLength!! * 8).compose()
+    bits = bits.subList(0, dataLength!! * 8)
+    bits = bits.toList().windowed(
+        size = 4,
+        step = 4,
+        partialWindows = true
+    ) {
+        unhash(it.toTypedArray()).toList()
+    }.flatten().toMutableList()
+    return bits.compose()
 }
 
 
