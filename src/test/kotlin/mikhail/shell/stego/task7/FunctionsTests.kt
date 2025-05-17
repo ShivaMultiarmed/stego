@@ -26,16 +26,10 @@ class FunctionsTests {
     @Test
     fun testHashFunction() {
         val bits = byteArrayOf(1, 0, 0, 1).toTypedArray()
-        val hashMatrix = arrayOf(
-            arrayOf(1, 0, 1, 1),
-            arrayOf(0, 1, 1, 0),
-            arrayOf(0, 0, 1, 1),
-            arrayOf(1, 1, 1, 1)
-        ).map {
-            row -> row.map { it.toByte() }.toTypedArray()
-        }.toTypedArray()
-        val expected = byteArrayOf(0, 0, 1, 0).toTypedArray()
-        val actual = createHash(hashMatrix, bits)
-        Assertions.assertArrayEquals(expected, actual)
+        val expectedHash = byteArrayOf(0, 0, 1, 0).toTypedArray()
+        val actualHash = hash(bits)
+        Assertions.assertArrayEquals(expectedHash, actualHash)
+        val actualBits = unhash(expectedHash)
+        Assertions.assertArrayEquals(bits, actualBits)
     }
 }

@@ -27,9 +27,32 @@ inline operator fun <reified T : Number> Array<Array<T>>.times(other: Array<Arra
     }.toTypedArray()
 }
 
-fun createHash(functionMatrix: Array<Array<Byte>>, bits: Array<Byte>): Array<Byte> {
+fun hash(functionMatrix: Array<Array<Byte>>, bits: Array<Byte>): Array<Byte> {
     val bitsVector = bits.map { bit -> Array(1) { bit } }.toTypedArray()
     val resultVector = functionMatrix * bitsVector
     return resultVector.flatMap { it.asList() }.map { (it % 2).toByte() }.toTypedArray()
 }
 
+fun hash(bits: Array<Byte>): Array<Byte> {
+    val hashMatrix = arrayOf(
+        arrayOf(1, 0, 1, 1),
+        arrayOf(0, 1, 1, 0),
+        arrayOf(0, 0, 1, 1),
+        arrayOf(1, 1, 1, 1)
+    ).map {
+            row -> row.map { it.toByte() }.toTypedArray()
+    }.toTypedArray()
+    return hash(hashMatrix, bits)
+}
+
+fun unhash(bits: Array<Byte>): Array<Byte> {
+    val unhashMatrix = arrayOf(
+        arrayOf(1, 0, 1, 0),
+        arrayOf(1, 0, 0, 1),
+        arrayOf(1, 1, 0, 1),
+        arrayOf(1, 1, 1, 1)
+    ).map {
+            row -> row.map { it.toByte() }.toTypedArray()
+    }.toTypedArray()
+    return hash(unhashMatrix, bits)
+}

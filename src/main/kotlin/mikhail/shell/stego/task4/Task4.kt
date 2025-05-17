@@ -138,6 +138,9 @@ fun IntegratingScreen(
                         ImageIO.write(interpolatedImage, interpolatedFile.extension, interpolatedFile)
                         val dataBytes = data.encodeToByteArray()
                         val outputImage = interpolatedImage.insertData(dataBytes)
+                        for (byte in dataBytes) {
+                            print("$byte ")
+                        }
                         val outputFile = File(
                             inputFile.parentFile,
                             inputFile.nameWithoutExtension + "-output." + inputFile.extension
@@ -223,6 +226,9 @@ fun ExtractingScreen(
                     val inputImage = ImageIO.read(inputFile)
                     val extractedBytes = inputImage.extractData()
                     extractedData = extractedBytes.decodeToString()
+                    for (byte in extractedBytes) {
+                        print("$byte ")
+                    }
                 }
             },
             text = "Извлечь данные"
