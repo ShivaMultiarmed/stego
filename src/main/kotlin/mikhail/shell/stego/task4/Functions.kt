@@ -43,17 +43,14 @@ fun ByteArray.arrange(width: Int, height: Int): Array<Array<Float>> {
     }
 }
 
-fun Array<Array<Float>>.chunk(): Array<Array<Array<Array<Float>>>> {
-    return Array(this.size / 2) { i ->
-        Array(this[0].size / 2) { j ->
-            val m00 = this[2 * i][2 * j]
-            val m01 = this[2 * i][2 * j + 1]
-            val m10 = this[2 * i + 1][2 * j]
-            val m11 = this[2 * i + 1][2 * j + 1]
-            arrayOf(
-                arrayOf(m00, m01),
-                arrayOf(m10, m11)
-            )
+fun Array<Array<Float>>.chunk(side: Int = 2): Array<Array<Array<Array<Float>>>> {
+    return Array(this.size / side) { i ->
+        Array(this[0].size / side) { j ->
+            Array(side) { m ->
+                Array(side) { n ->
+                    this[i * side + m][j * side + n]
+                }
+            }
         }
     }
 }
