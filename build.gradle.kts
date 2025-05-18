@@ -96,7 +96,6 @@ tasks.create<Jar>("stego4") {
     }
     from(sourceSets.main.get().output) {
         include("mikhail/shell/stego/task4/**")
-        include("mikhail/shell/stego/task7/**")
         include("mikhail/shell/stego/common/**")
     }
     dependsOn(configurations.runtimeClasspath)

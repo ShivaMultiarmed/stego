@@ -124,13 +124,13 @@ fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
     ) {
         hash(it.toTypedArray()).toList()
     }.flatten().toTypedArray()
-//    val encodedBits = bits.toList().windowed(
-//        size = 4,
-//        step = 1,
-//        partialWindows = true
-//    ) {
-//        encode(it.toTypedArray())
-//    }
+    bits = bits.toList().windowed(
+        size = 4,
+        step = 4,
+        partialWindows = false
+    ) {
+        encode(it.toTypedArray()).toList()
+    }.flatten().toTypedArray()
     val blocks = formattedInput.chunk(side = 2)
     for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
@@ -215,6 +215,13 @@ fun BufferedImage.extractData(): Array<Byte> {
             }
         }
     }
+    bits = bits.toList().windowed(
+        size = 7,
+        step = 7,
+        partialWindows = false
+    ) {
+        decode(it.toTypedArray()).toList()
+    }.flatten().toMutableList()
     bits = bits.toList().windowed(
         size = 4,
         step = 4,
