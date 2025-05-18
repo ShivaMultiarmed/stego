@@ -164,7 +164,8 @@ fun ExtractingScreen(parent: Frame) {
                 onClick = {
                     val file = File(filePath)
                     val image = ImageIO.read(file)
-                    val extractedBytes = image.extractData()
+                    val safeImage = image.getSafeImage()
+                    val extractedBytes = safeImage.extractData()
                     result = extractedBytes.decodeToString()
                 },
                 text = "Извлечь данные"

@@ -2,6 +2,7 @@ package mikhail.shell.stego.task3
 
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
+import java.awt.image.DataBufferInt
 import java.io.File
 import java.nio.ByteBuffer
 import kotlin.math.log
@@ -99,7 +100,6 @@ operator fun Int.get(index: Int): Int {
 fun BufferedImage.extractData(): ByteArray {
     val bits = mutableListOf<Int>()
     var size = 0
-    var readByteNumber = 0
     val inputBytes = (raster.dataBuffer as DataBufferByte).data
     inputBytes.map { it.toInt() and 0xFF }.forEachIndexed { i, byte ->
         if (bits.size / 8 >= 4 && size == 0) {
@@ -122,6 +122,20 @@ fun BufferedImage.extractData(): ByteArray {
         }
     }
     return bits.take(size * 8).compose()
+}
+
+fun BufferedImage.getSafeImage(): BufferedImage {
+    return if (type == BufferedImage.TYPE_BYTE_GRAY) {
+        this
+    } else {
+        val initialBytes = (raster.dataBuffer as DataBufferInt).data
+        BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY).apply {
+            val outputBytes = (raster.dataBuffer as DataBufferByte).data
+            for (i in initialBytes.indices) {
+                outputBytes[i] = initialBytes[i].toByte()
+            }
+        }
+    }
 }
 
 fun List<Int>.compose(): ByteArray {
