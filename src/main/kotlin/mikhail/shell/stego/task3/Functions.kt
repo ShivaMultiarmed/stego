@@ -29,40 +29,37 @@ fun Array<Byte>.unite(): Byte {
 }
 
 fun Byte.separate(): Array<Byte> {
-    return Array(8) { i ->
-        this[i]
-    }
+    return Array(8) { i -> this[i] }
 }
 
 fun BufferedImage.insertData(byteData: Array<Byte>): BufferedImage {
     val outputImage = BufferedImage(width, height, type)
     var currentPairNumber = 0
     val bits = byteData.decompose()
-    val data = pack(bits).group(size = 2)
+    val dataPairs = pack(bits).group(size = 2)
 
     val inputBytes = (raster.dataBuffer as DataBufferByte).data
     val outputBytes = (outputImage.raster.dataBuffer as DataBufferByte).data
 
     for (i in outputBytes.indices) {
         val initialByte = inputBytes[i]
-        if (currentPairNumber < data.size) {
-            val half = ((initialByte.toInt() and 0xFF) shr 4).toByte().toInt() and 0xFF
-            val Cl = arrayOf((half shr 3) and 1, (half shr 2) and 1)
-            val Cm = arrayOf((half shr 2) and 1, (half shr 1) and 1)
-            val Cr = arrayOf((half shr 1) and 1, half and 1)
-            val Bl = if (Cl.contentEquals(data[currentPairNumber])) {
+        if (currentPairNumber < dataPairs.size) {
+            val Cl = arrayOf(initialByte[0], initialByte[1])
+            val Cm = arrayOf(initialByte[1], initialByte[2])
+            val Cr = arrayOf(initialByte[2], initialByte[3])
+            val Bl = if (Cl.contentEquals(dataPairs[currentPairNumber])) {
                 currentPairNumber++
                 1
             } else {
                 0
             }.toByte()
-            val Bm = if (currentPairNumber < data.size && Cm.contentEquals(data[currentPairNumber])) {
+            val Bm = if (currentPairNumber < dataPairs.size && Cm.contentEquals(dataPairs[currentPairNumber])) {
                 currentPairNumber++
                 1
             } else {
                 0
             }.toByte()
-            val Br = if (currentPairNumber < data.size && Cr.contentEquals(data[currentPairNumber])) {
+            val Br = if (currentPairNumber < dataPairs.size && Cr.contentEquals(dataPairs[currentPairNumber])) {
                 currentPairNumber++
                 1
             } else {
@@ -99,7 +96,7 @@ fun BufferedImage.extractData(): Array<Byte> {
             bits.addAll(listOf(byte[2], byte[3]))
         }
     }
-    return unpack(bits).toTypedArray()
+    return unpack(bits.toTypedArray()).compose()
 }
 
 fun BufferedImage.getSafeImage(): BufferedImage {
@@ -117,9 +114,13 @@ fun BufferedImage.getSafeImage(): BufferedImage {
 }
 
 fun Array<Byte>.compose(): Array<Byte> {
-    return Array(this.size / 8) { i ->
-        this.toList().subList(i * 8, (i + 1) * 8).toTypedArray().unite()
-    }
+    return this.toList().windowed(
+        size = 8,
+        step = 8,
+        partialWindows = false
+    ) {
+        it.toTypedArray().unite()
+    }.toTypedArray()
 }
 
 fun Array<Byte>.decompose(): Array<Byte> {
@@ -150,8 +151,8 @@ fun evaluatePSNR(max: Float, mse: Float): Float {
     return 10 * log10(max.pow(2) / mse)
 }
 
-const val START_FLAG: Byte = 0b01111111
-const val END_FLAG: Byte = 0b00000000
+const val START_FLAG: Byte = 0x7E
+const val END_FLAG: Byte = 0x7D
 const val PAYLOAD_SIZE = 16 * 8
 
 fun pack(bits: Array<Byte>): Array<Byte> {
@@ -160,36 +161,35 @@ fun pack(bits: Array<Byte>): Array<Byte> {
         step = PAYLOAD_SIZE,
         partialWindows = true
     ) {
-        listOf(START_FLAG) + it + listOf(END_FLAG)
+        START_FLAG.separate().toList() + it + END_FLAG.separate().toList()
     }.flatten().toTypedArray()
 }
 
-fun unpack(bits: List<Byte>): List<Byte> {
-    val resultBits = mutableListOf<Byte>()
+fun unpack(bits: Array<Byte>): Array<Byte> {
+    val flagSize = 8
+    val packetSize = flagSize + PAYLOAD_SIZE + flagSize
+    val result = mutableListOf<Byte>()
 
-    var startFlagIndex = -1
-    var endFlagIndex = -1
+    var i = 0
+    while (i + packetSize <= bits.size) {
+        val startFlagBits = bits.slice(i until i + flagSize).toTypedArray()
+        val startFlag = startFlagBits.unite()
 
-    for (i in bits.indices) {
-        try {
-            val currentByte = bits.subList(i, i + 8).toTypedArray().unite()
-            if (currentByte == START_FLAG) {
-                startFlagIndex = i
+        if (startFlag == START_FLAG) {
+            val endFlagBits = bits.slice(i + flagSize + PAYLOAD_SIZE until i + packetSize).toTypedArray()
+            val endFlag = endFlagBits.unite()
+
+            if (endFlag == END_FLAG) {
+                val payload = bits.slice(i + flagSize until i + flagSize + PAYLOAD_SIZE)
+                result.addAll(payload)
+
+                i += packetSize
+                continue
             }
-            if (currentByte == END_FLAG) {
-                endFlagIndex = i
-            }
-            if ((endFlagIndex - startFlagIndex - 8) <= 128) {
-                val payload = bits.subList(startFlagIndex + 8, endFlagIndex)
-                resultBits.addAll(payload)
-            } else {
-                startFlagIndex = -1
-                endFlagIndex = -1
-            }
-        } catch (e: IndexOutOfBoundsException) {
-            break
         }
+
+        i += 8
     }
 
-    return resultBits
+    return result.toTypedArray()
 }
