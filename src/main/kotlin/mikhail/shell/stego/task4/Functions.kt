@@ -1,7 +1,6 @@
 package mikhail.shell.stego.task4
 
 import mikhail.shell.stego.common.*
-import mikhail.shell.stego.task7.*
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
@@ -103,21 +102,21 @@ fun hash(bits: Array<Byte>): Array<Byte> {
 }
 
 fun unhash(bits: Array<Byte>): Array<Byte> {
-    val hashMatrix = arrayOf(
+    val unhashMatrix = arrayOf(
         byteArrayOf(1, 0, 1, 0),
         byteArrayOf(1, 0, 0, 1),
         byteArrayOf(1, 1, 0, 1),
         byteArrayOf(1, 1, 1, 1)
     ).map { it.toTypedArray() }.toTypedArray()
-    return hash(hashMatrix, bits)
+    return hash(unhashMatrix, bits)
 }
 
-fun BufferedImage.insertData(data: ByteArray): BufferedImage {
-    val dataLength = data.size.toByteArray()
+fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
     val formattedInput = inputBuffer.toTypedArray().arrange(width, height)
     var bitNum = 0
-    var bits = (dataLength + data).toTypedArray().decompose()
+    var bits = data.decompose()
+    bits = pack(bits)
     bits = bits.toList().windowed(
         size = 4,
         step = 4,
@@ -185,31 +184,12 @@ fun BufferedImage.extractData(): Array<Byte> {
     val arrangedInput = (raster.dataBuffer as DataBufferByte).data
         .toTypedArray()
         .arrange(width, height)
-    var bitNum = 0
-    var dataLength: Int? = null
     val blocks = arrangedInput.chunk(side = 2)
     outer@ for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
             val right = blocks[i][j + 1]
             val bottom = blocks[i + 1][j]
-            if (dataLength == null && bitNum >= 8 * 4) {
-                val dataLengthBits = bits.subList(0, 8 * 4).windowed(
-                    size = 4,
-                    step = 4,
-                    partialWindows = false
-                ) {
-                    unhash(it.toTypedArray()).toList()
-                }.flatten().toMutableList()
-                dataLength = dataLengthBits.joinToString("").toInt(2)
-                bits.subList(0, 4 * 8).clear()
-                bitNum -= 4 * 8
-            }
-            if (dataLength != null) {
-                if (bitNum >= dataLength * 8) {
-                    break@outer
-                }
-            }
             for (r in 0..1) {
                 for (c in 0..1) {
                     if (r == 0 && c == 0) {
@@ -230,20 +210,19 @@ fun BufferedImage.extractData(): Array<Byte> {
                         .asSequence().toList()
                         .map { it.digitToInt().toByte() }
                         .let { List(n - it.size) { 0.toByte() } + it }
-                    bitNum += bitPart.size
                     bits.addAll(bitPart)
                 }
             }
         }
     }
-    bits = bits.subList(0, dataLength!! * 8)
     bits = bits.toList().windowed(
         size = 4,
         step = 4,
-        partialWindows = true
+        partialWindows = false
     ) {
         unhash(it.toTypedArray()).toList()
     }.flatten().toMutableList()
+    bits = unpack(bits.toTypedArray()).toMutableList()
     return bits.toTypedArray().compose()
 }
 

@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import mikhail.shell.stego.common.StegoButton
 import mikhail.shell.stego.common.openFiles
 import mikhail.shell.stego.common.TabRow
+import mikhail.shell.stego.common.getSafeImage
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -146,7 +147,7 @@ fun IntegratingScreen(
                             )
                             ImageIO.write(interpolatedImage, interpolatedFile.extension, interpolatedFile)
                             val dataBytes = data.encodeToByteArray()
-                            val outputImage = interpolatedImage.insertData(dataBytes)
+                            val outputImage = interpolatedImage.insertData(dataBytes.toTypedArray())
                             for (byte in dataBytes) {
                                 print("$byte ")
                             }
@@ -250,7 +251,8 @@ fun ExtractingScreen(
                     inputPath?.let {
                         val inputFile = File(it)
                         val inputImage = ImageIO.read(inputFile)
-                        val extractedBytes = inputImage.extractData()
+                        val safeInputImage = inputImage.getSafeImage()
+                        val extractedBytes = safeInputImage.extractData()
                         extractedData = extractedBytes.toByteArray().decodeToString()
                         for (byte in extractedBytes) {
                             print("$byte ")
