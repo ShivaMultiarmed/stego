@@ -96,7 +96,7 @@ fun IntegratingScreen(
                 inputPaths.forEach {
                     val inputFile = File(it)
                     val inputImage = ImageIO.read(inputFile)
-                    val outputImage = inputImage.insertData(data.encodeToByteArray())
+                    val outputImage = inputImage.insertData(data.encodeToByteArray().toTypedArray())
                     val outputFile =
                         File(inputFile.parentFile, inputFile.nameWithoutExtension + "-output." + inputFile.extension)
                     ImageIO.write(outputImage, outputFile.extension, outputFile)
@@ -166,7 +166,7 @@ fun ExtractingScreen(parent: Frame) {
                     val image = ImageIO.read(file)
                     val safeImage = image.getSafeImage()
                     val extractedBytes = safeImage.extractData()
-                    result = extractedBytes.decodeToString()
+                    result = extractedBytes.toByteArray().decodeToString()
                 },
                 text = "Извлечь данные"
             )
