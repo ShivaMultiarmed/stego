@@ -151,14 +151,14 @@ fun evaluatePSNR(max: Float, mse: Float): Float {
     return 10 * log10(max.pow(2) / mse)
 }
 
-const val START_FLAG: Byte = 0x7E
-const val END_FLAG: Byte = 0x7D
-const val PAYLOAD_SIZE = 16 * 8
+const val START_FLAG: Byte = 0x01
+const val END_FLAG: Byte = 0x0F
+const val MAX_PAYLOAD_SIZE = 16 * 8
 
 fun pack(bits: Array<Byte>): Array<Byte> {
     return bits.toList().windowed(
-        size = PAYLOAD_SIZE,
-        step = PAYLOAD_SIZE,
+        size = MAX_PAYLOAD_SIZE,
+        step = MAX_PAYLOAD_SIZE,
         partialWindows = true
     ) {
         START_FLAG.separate().toList() + it + END_FLAG.separate().toList()
@@ -167,7 +167,7 @@ fun pack(bits: Array<Byte>): Array<Byte> {
 
 fun unpack(bits: Array<Byte>): Array<Byte> {
     val flagSize = 8
-    val packetSize = flagSize + PAYLOAD_SIZE + flagSize
+    val packetSize = flagSize + MAX_PAYLOAD_SIZE + flagSize
     val result = mutableListOf<Byte>()
 
     var i = 0
@@ -176,19 +176,24 @@ fun unpack(bits: Array<Byte>): Array<Byte> {
         val startFlag = startFlagBits.unite()
 
         if (startFlag == START_FLAG) {
-            val endFlagBits = bits.slice(i + flagSize + PAYLOAD_SIZE until i + packetSize).toTypedArray()
+            val endFlagStart = i + flagSize + MAX_PAYLOAD_SIZE
+            val endFlagBits = bits.slice(endFlagStart until endFlagStart + flagSize).toTypedArray()
             val endFlag = endFlagBits.unite()
 
             if (endFlag == END_FLAG) {
-                val payload = bits.slice(i + flagSize until i + flagSize + PAYLOAD_SIZE)
+                // Добавляем полезную нагрузку в результат
+                val payload = bits.slice(i + flagSize until endFlagStart)
                 result.addAll(payload)
-
                 i += packetSize
                 continue
+            } else {
+                // Если конечный флаг не совпал, сдвигаемся на 1 бит, чтобы не пропустить пакет
+                i += 1
             }
+        } else {
+            // Если стартовый флаг не совпал, сдвигаемся на 1 бит
+            i += 1
         }
-
-        i += 8
     }
 
     return result.toTypedArray()
