@@ -12,6 +12,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import mikhail.shell.stego.common.StegoButton
 import mikhail.shell.stego.common.TabRow
+import mikhail.shell.stego.common.getSafeImage
 import mikhail.shell.stego.common.openFiles
 import java.awt.FileDialog
 import java.awt.Frame

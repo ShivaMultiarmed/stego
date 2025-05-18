@@ -1,9 +1,8 @@
 package mikhail.shell.stego.task3
 
+import mikhail.shell.stego.common.*
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferByte
-import java.awt.image.DataBufferInt
-import kotlin.experimental.and
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -18,18 +17,6 @@ fun Array<Byte>.group(size: Int = 2): Array<Array<Byte>> {
 
 fun Byte.modifyByte(mappingBits: Byte): Byte {
     return ((this.toInt() and 0xF8) or (mappingBits.toInt() and 0x07)).toByte()
-}
-
-fun Array<Byte>.unite(): Byte {
-    var result = 0.toByte()
-    for (bit in this) {
-        result = (result * 2 + bit).toByte()
-    }
-    return result
-}
-
-fun Byte.separate(): Array<Byte> {
-    return Array(8) { i -> this[i] }
 }
 
 fun BufferedImage.insertData(byteData: Array<Byte>): BufferedImage {
@@ -65,7 +52,7 @@ fun BufferedImage.insertData(byteData: Array<Byte>): BufferedImage {
             } else {
                 0
             }.toByte()
-            val mappingBits = arrayOf(Bl, Bm, Br).unite()
+            val mappingBits = arrayOf(Bl, Bm, Br).implode()
             val newByte = initialByte.modifyByte(mappingBits)
             outputBytes[i] = newByte
         } else {
@@ -73,10 +60,6 @@ fun BufferedImage.insertData(byteData: Array<Byte>): BufferedImage {
         }
     }
     return outputImage
-}
-
-operator fun Byte.get(index: Int): Byte {
-    return ((this.toInt() and 0xFF) shr (7 - index)).toByte() and 1
 }
 
 fun BufferedImage.extractData(): Array<Byte> {
@@ -97,36 +80,6 @@ fun BufferedImage.extractData(): Array<Byte> {
         }
     }
     return unpack(bits.toTypedArray()).compose()
-}
-
-fun BufferedImage.getSafeImage(): BufferedImage {
-    return if (type == BufferedImage.TYPE_BYTE_GRAY) {
-        this
-    } else {
-        val initialBytes = (raster.dataBuffer as DataBufferInt).data
-        BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY).apply {
-            val outputBytes = (raster.dataBuffer as DataBufferByte).data
-            for (i in initialBytes.indices) {
-                outputBytes[i] = initialBytes[i].toByte()
-            }
-        }
-    }
-}
-
-fun Array<Byte>.compose(): Array<Byte> {
-    return this.toList().windowed(
-        size = 8,
-        step = 8,
-        partialWindows = false
-    ) {
-        it.toTypedArray().unite()
-    }.toTypedArray()
-}
-
-fun Array<Byte>.decompose(): Array<Byte> {
-    return this.toList().map {
-        it.separate()
-    }.toTypedArray().flatten().toTypedArray()
 }
 
 fun evaluateMSE(
@@ -155,46 +108,3 @@ const val START_FLAG: Byte = 0x01
 const val END_FLAG: Byte = 0x0F
 const val MAX_PAYLOAD_SIZE = 16 * 8
 
-fun pack(bits: Array<Byte>): Array<Byte> {
-    return bits.toList().windowed(
-        size = MAX_PAYLOAD_SIZE,
-        step = MAX_PAYLOAD_SIZE,
-        partialWindows = true
-    ) {
-        START_FLAG.separate().toList() + it + END_FLAG.separate().toList()
-    }.flatten().toTypedArray()
-}
-
-fun unpack(bits: Array<Byte>): Array<Byte> {
-    val flagSize = 8
-    val packetSize = flagSize + MAX_PAYLOAD_SIZE + flagSize
-    val result = mutableListOf<Byte>()
-
-    var i = 0
-    while (i + packetSize <= bits.size) {
-        val startFlagBits = bits.slice(i until i + flagSize).toTypedArray()
-        val startFlag = startFlagBits.unite()
-
-        if (startFlag == START_FLAG) {
-            val endFlagStart = i + flagSize + MAX_PAYLOAD_SIZE
-            val endFlagBits = bits.slice(endFlagStart until endFlagStart + flagSize).toTypedArray()
-            val endFlag = endFlagBits.unite()
-
-            if (endFlag == END_FLAG) {
-                // Добавляем полезную нагрузку в результат
-                val payload = bits.slice(i + flagSize until endFlagStart)
-                result.addAll(payload)
-                i += packetSize
-                continue
-            } else {
-                // Если конечный флаг не совпал, сдвигаемся на 1 бит, чтобы не пропустить пакет
-                i += 1
-            }
-        } else {
-            // Если стартовый флаг не совпал, сдвигаемся на 1 бит
-            i += 1
-        }
-    }
-
-    return result.toTypedArray()
-}

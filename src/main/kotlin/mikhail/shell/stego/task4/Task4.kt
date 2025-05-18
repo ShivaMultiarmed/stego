@@ -251,7 +251,7 @@ fun ExtractingScreen(
                         val inputFile = File(it)
                         val inputImage = ImageIO.read(inputFile)
                         val extractedBytes = inputImage.extractData()
-                        extractedData = extractedBytes.decodeToString()
+                        extractedData = extractedBytes.toByteArray().decodeToString()
                         for (byte in extractedBytes) {
                             print("$byte ")
                         }

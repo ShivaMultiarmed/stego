@@ -1,57 +1,16 @@
 package mikhail.shell.stego.task4
 
+import mikhail.shell.stego.common.*
 import mikhail.shell.stego.task7.*
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
 import kotlin.math.*
 
-operator fun Byte.get(index: Int): Byte {
-    return ((this.toInt() shr (7 - index)) and 1).toByte()
-}
-
-fun ByteArray.getBit(bitNumber: Int): Byte {
-    val byteNumber = bitNumber / 8
-    val specificBitNumber = bitNumber % 8
-    return this[byteNumber][specificBitNumber]
-}
-
-fun List<Byte>.compose(): ByteArray {
-    return ByteArray(this.size / 8) { i ->
-        this.subList(i * 8, (i + 1) * 8).toTypedArray().unite()
-    }
-}
-
-fun ByteArray.decompose(): ByteArray {
-    return ByteArray(this.size * 8) { i ->
-        this.getBit(i)
-    }
-}
-
-fun Array<Byte>.unite(): Byte {
-    var result = 0
-    for (x in this) {
-        result = (result shl 1) or x.toInt()
-    }
-    return result.toByte()
-}
-
-fun ByteArray.arrange(width: Int, height: Int): Array<Array<Float>> {
+fun Array<Byte>.arrange(width: Int, height: Int): Array<Array<Float>> {
     return Array(height) { i ->
         Array(width) { j ->
             (this[i * width + j].toInt() and 0xFF).toFloat()
-        }
-    }
-}
-
-fun Array<Array<Float>>.chunk(side: Int = 2): Array<Array<Array<Array<Float>>>> {
-    return Array(this.size / side) { i ->
-        Array(this[0].size / side) { j ->
-            Array(side) { m ->
-                Array(side) { n ->
-                    this[i * side + m][j * side + n]
-                }
-            }
         }
     }
 }
@@ -68,7 +27,7 @@ fun BufferedImage.interpolate(): BufferedImage {
     val K = 2
     val inputBuffer = raster.dataBuffer as DataBufferByte
     val bytes = inputBuffer.data
-    val initialBytes = bytes.arrange(width, height)
+    val initialBytes = bytes.toTypedArray().arrange(width, height)
     val newWidth = width * K
     val newHeight = height * K
     val newBytes = Array(newHeight) { Array(newWidth) { 0f } }
@@ -128,16 +87,37 @@ fun encode(bits: Array<Byte>): Array<Byte> {
     ).map { it.toTypedArray() }.toTypedArray()
     return encode(parityMatrix, bits)
 }
+
 fun decode(bits: Array<Byte>): Array<Byte> {
     return decode(4, bits)
+}
+
+fun hash(bits: Array<Byte>): Array<Byte> {
+    val hashMatrix = arrayOf(
+        byteArrayOf(1, 0, 1, 1),
+        byteArrayOf(0, 1, 1, 0),
+        byteArrayOf(0, 0, 1, 1),
+        byteArrayOf(1, 1, 1, 1)
+    ).map { it.toTypedArray() }.toTypedArray()
+    return hash(hashMatrix, bits)
+}
+
+fun unhash(bits: Array<Byte>): Array<Byte> {
+    val hashMatrix = arrayOf(
+        byteArrayOf(1, 0, 1, 0),
+        byteArrayOf(1, 0, 0, 1),
+        byteArrayOf(1, 1, 0, 1),
+        byteArrayOf(1, 1, 1, 1)
+    ).map { it.toTypedArray() }.toTypedArray()
+    return hash(hashMatrix, bits)
 }
 
 fun BufferedImage.insertData(data: ByteArray): BufferedImage {
     val dataLength = data.size.toByteArray()
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
-    val formattedInput = inputBuffer.arrange(width, height)
+    val formattedInput = inputBuffer.toTypedArray().arrange(width, height)
     var bitNum = 0
-    var bits = (dataLength + data).decompose().toTypedArray()
+    var bits = (dataLength + data).toTypedArray().decompose()
     bits = bits.toList().windowed(
         size = 4,
         step = 4,
@@ -167,7 +147,7 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
                     if (n > 0 && bitNum < bits.size) {
                         val end = (bitNum + n).coerceAtMost(bits.size)
                         val slice = bits.sliceArray(bitNum until end)
-                        val b = slice.unite().toInt()
+                        val b = slice.implode().toInt()
                         bitNum += n
                         block[r][c] = block[r][c] + b
                     }
@@ -199,10 +179,11 @@ fun BufferedImage.insertData(data: ByteArray): BufferedImage {
     return outputImage
 }
 
-fun BufferedImage.extractData(): ByteArray {
+fun BufferedImage.extractData(): Array<Byte> {
     val K = 2
     var bits = mutableListOf<Byte>()
     val arrangedInput = (raster.dataBuffer as DataBufferByte).data
+        .toTypedArray()
         .arrange(width, height)
     var bitNum = 0
     var dataLength: Int? = null
@@ -263,7 +244,7 @@ fun BufferedImage.extractData(): ByteArray {
     ) {
         unhash(it.toTypedArray()).toList()
     }.flatten().toMutableList()
-    return bits.compose()
+    return bits.toTypedArray().compose()
 }
 
 
