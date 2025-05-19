@@ -9,6 +9,7 @@ import java.awt.image.DataBufferByte
 import java.awt.image.DataBufferInt
 import kotlin.experimental.and
 import kotlin.experimental.xor
+import kotlin.random.Random
 
 fun Byte.explode(): Array<Byte> {
     return Array(8) { i -> this[i] }
@@ -27,11 +28,11 @@ operator fun Byte.get(index: Int): Byte {
 }
 
 fun BufferedImage.getSafeImage(): BufferedImage {
-    return if (type == BufferedImage.TYPE_BYTE_GRAY) {
+    return if (type == TYPE_BYTE_GRAY) {
         this
     } else {
         val initialBytes = (raster.dataBuffer as DataBufferInt).data
-        BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY).apply {
+        BufferedImage(width, height, TYPE_BYTE_GRAY).apply {
             val outputBytes = (raster.dataBuffer as DataBufferByte).data
             for (i in initialBytes.indices) {
                 outputBytes[i] = initialBytes[i].toByte()
@@ -174,20 +175,15 @@ inline fun <reified T> Array<T>.toVector(): Array<Array<T>> {
     }
 }
 
-fun BufferedImage.ensureEvenDimensions(): BufferedImage {
-    val newW = if (width % 2 == 0) width else width + 1
-    val newH = if (height % 2 == 0) height else height + 1
-    if (newW == width && newH == height) return this
+infix fun Array<Byte>.xor(other: Array<Byte>): Array<Byte> {
+    return this.mapIndexed { i, item ->
+        item xor other[i]
+    }.toTypedArray()
+}
 
-    val out = BufferedImage(newW, newH, TYPE_BYTE_GRAY)
-    // копируем исходное изображение
-    out.graphics.drawImage(this, 0, 0, null)
-    // дублируем последний столбец/строку
-    for (y in 0 until newH) {
-        out.raster.setSample(newW - 1, y, 0, this.raster.getSample(width - 1, y, 0))
-    }
-    for (x in 0 until newW) {
-        out.raster.setSample(x, newH - 1, 0, out.raster.getSample(x, height - 1, 0))
-    }
-    return out
+fun Random.generateKey(): Array<Byte> {
+    return this
+        .nextBytes(18)
+        .toTypedArray()
+        .decompose()
 }

@@ -104,6 +104,11 @@ fun IntegratingScreen(
             var data by remember { mutableStateOf("") }
             val mse = remember { mutableStateListOf<Float>() }
             val psnr = derivedStateOf { mse.map { evaluatePSNR(255f, it) } }
+            var keyString by remember { mutableStateOf("") }
+            TextField(
+                value = keyString,
+                onValueChange = { keyString = it }
+            )
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -147,7 +152,10 @@ fun IntegratingScreen(
                             )
                             ImageIO.write(interpolatedImage, interpolatedFile.extension, interpolatedFile)
                             val dataBytes = data.encodeToByteArray()
-                            val outputImage = interpolatedImage.insertData(dataBytes.toTypedArray())
+                            val outputImage = interpolatedImage.insertData(
+                                data = dataBytes.toTypedArray(),
+                                key = keyString.encodeToByteArray().toTypedArray()
+                            )
                             val outputFile = File(
                                 inputFile.parentFile,
                                 inputFile.nameWithoutExtension + "-output." + inputFile.extension
@@ -233,6 +241,11 @@ fun ExtractingScreen(
         ) {
             var inputPath by remember { mutableStateOf(null as String?) }
             var extractedData by remember { mutableStateOf(null as String?) }
+            var keyString by remember { mutableStateOf("") }
+            TextField(
+                value = keyString,
+                onValueChange = { keyString = it }
+            )
             StegoButton(
                 onClick = {
                     val selectedFile =
@@ -250,7 +263,11 @@ fun ExtractingScreen(
                         val inputImage = ImageIO.read(inputFile)
                         val extractedBytes = inputImage
                             .getSafeImage()
-                            .extractData()
+                            .extractData(
+                                key = keyString
+                                    .encodeToByteArray()
+                                    .toTypedArray()
+                            )
                         extractedData = extractedBytes
                             .toByteArray()
                             .decodeToString()
@@ -278,4 +295,22 @@ fun openFile(
     val dialog = FileDialog(parent, title, FileDialog.LOAD)
     dialog.isVisible = true
     return if (dialog.file != null) "${dialog.directory}${dialog.file}" else null
+}
+
+fun evaluateNoises(imageMatrix: Array<Array<Float>>): Array<Array<Float>> {
+    return imageMatrix
+        .chunk(side = 8)
+        .map {
+            it.map {
+                var oneCounts = 0f
+                it.forEach {
+                    it.forEach {
+                        if (it.toInt().toByte()[7] == 1.toByte()) {
+                            oneCounts++
+                        }
+                    }
+                }
+                oneCounts / (8 * 8)
+            }.toTypedArray()
+        }.toTypedArray()
 }

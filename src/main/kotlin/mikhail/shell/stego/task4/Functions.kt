@@ -1,6 +1,7 @@
 package mikhail.shell.stego.task4
 
 import mikhail.shell.stego.common.*
+import mikhail.shell.stego.task3.MAX_PAYLOAD_SIZE
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
@@ -78,7 +79,7 @@ fun BufferedImage.interpolate(): BufferedImage {
     return output
 }
 
-fun encode(bits: Array<Byte>): Array<Byte> {
+fun encodeSmallBlock(bits: Array<Byte>): Array<Byte> {
     val parityMatrix = arrayOf(
         byteArrayOf(1, 1, 1, 0, 1, 0, 0),
         byteArrayOf(1, 0, 0, 1, 0, 1, 0),
@@ -87,7 +88,20 @@ fun encode(bits: Array<Byte>): Array<Byte> {
     return encode(parityMatrix, bits)
 }
 
-fun decode(bits: Array<Byte>): Array<Byte> {
+fun decodeSmallBlock(bits: Array<Byte>): Array<Byte> {
+    return decode(4, bits)
+}
+
+fun encodeLargeBlock(bits: Array<Byte>): Array<Byte> {
+    val parityMatrix = arrayOf(
+        byteArrayOf(1, 1, 1, 0, 1, 0, 0),
+        byteArrayOf(1, 0, 0, 1, 0, 1, 0),
+        byteArrayOf(0, 1, 0, 1, 0, 0, 1)
+    ).map { it.toTypedArray() }.toTypedArray()
+    return encode(parityMatrix, bits)
+}
+
+fun decodeLargeBlock(bits: Array<Byte>): Array<Byte> {
     return decode(4, bits)
 }
 
@@ -111,13 +125,29 @@ fun unhash(bits: Array<Byte>): Array<Byte> {
     return hash(unhashMatrix, bits)
 }
 
-fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
+fun BufferedImage.insertData(data: Array<Byte>, key: Array<Byte>): BufferedImage {
     val inputBuffer = (raster.dataBuffer as DataBufferByte).data
-    val formattedInput = inputBuffer.toTypedArray().arrange(width, height)
+    val imageMatrix = inputBuffer
+        .toTypedArray()
+        .arrange(width, height)
+    val initialImageMatrix = Array(height / 2) { i ->
+        Array(width / 2) { j ->
+            imageMatrix[i * 2][j * 2]
+        }
+    }
+    val noises = evaluateNoises(initialImageMatrix)
     var bitNum = 0
     var bits = data.decompose()
-    bits = pack(bits)
+    val keyBits = key.decompose()
     bits = bits.toList().windowed(
+        size = MAX_PAYLOAD_SIZE,
+        step = MAX_PAYLOAD_SIZE,
+        partialWindows = false
+    ) {
+        (it.toTypedArray() xor keyBits).toList()
+    }.flatten().toTypedArray()
+    bits = pack(bits)
+    bits = bits.toList().windowed (
         size = 4,
         step = 4,
         partialWindows = true
@@ -131,7 +161,7 @@ fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
 //    ) {
 //        encode(it.toTypedArray()).toList()
 //    }.flatten().toTypedArray()
-    val blocks = formattedInput.chunk(side = 2)
+    val blocks = imageMatrix.chunk(side = 2)
     for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
@@ -178,7 +208,7 @@ fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
     return outputImage
 }
 
-fun BufferedImage.extractData(adjustment: Pair<Int, Int> = 0 to 0): Array<Byte> {
+fun BufferedImage.extractData(key: Array<Byte>, adjustment: Pair<Int, Int> = 0 to 0): Array<Byte> {
     val K = 2
     var bits = mutableListOf<Byte>()
     val arrangedInput = (raster.dataBuffer as DataBufferByte).data
@@ -227,7 +257,7 @@ fun BufferedImage.extractData(adjustment: Pair<Int, Int> = 0 to 0): Array<Byte> 
                                     c == 0 -> adjustment.copy(first = 1)
                                     else -> adjustment.copy(first = 1, second = 1)
                                 }
-                                return extractData(adjustment = adj)
+                                return extractData(key = key, adjustment = adj)
                             }
                         }
                     bits.addAll(bitPart)
@@ -250,11 +280,19 @@ fun BufferedImage.extractData(adjustment: Pair<Int, Int> = 0 to 0): Array<Byte> 
         unhash(it.toTypedArray()).toList()
     }.flatten().toMutableList()
     bits = unpack(bits.toTypedArray()).toMutableList()
-    return bits.toTypedArray().compose()
+    val keyBits = key.decompose()
+    val initialBits = bits.windowed(
+        size = MAX_PAYLOAD_SIZE,
+        step = MAX_PAYLOAD_SIZE,
+        partialWindows = false
+    ) {
+        (it.toTypedArray() xor keyBits).toList()
+    }.flatten().toTypedArray()
+    return initialBits.compose()
 }
 
 
-fun Array<Array<Array<Array<Float>>>>.print(): String {
+fun Array<Array<Array<Array<Float>>>>.asString(): String {
     val builder = StringBuilder()
     for (i in this.indices) {
         for (j in this[i].indices) {
