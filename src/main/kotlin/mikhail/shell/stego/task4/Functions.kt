@@ -124,13 +124,13 @@ fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
     ) {
         hash(it.toTypedArray()).toList()
     }.flatten().toTypedArray()
-    bits = bits.toList().windowed(
-        size = 4,
-        step = 4,
-        partialWindows = false
-    ) {
-        encode(it.toTypedArray()).toList()
-    }.flatten().toTypedArray()
+//    bits = bits.toList().windowed(
+//        size = 4,
+//        step = 4,
+//        partialWindows = false
+//    ) {
+//        encode(it.toTypedArray()).toList()
+//    }.flatten().toTypedArray()
     val blocks = formattedInput.chunk(side = 2)
     for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
@@ -178,12 +178,21 @@ fun BufferedImage.insertData(data: Array<Byte>): BufferedImage {
     return outputImage
 }
 
-fun BufferedImage.extractData(): Array<Byte> {
+fun BufferedImage.extractData(adjustment: Pair<Int, Int> = 0 to 0): Array<Byte> {
     val K = 2
     var bits = mutableListOf<Byte>()
     val arrangedInput = (raster.dataBuffer as DataBufferByte).data
         .toTypedArray()
         .arrange(width, height)
+        .toList()
+        .subList(adjustment.second, height)
+        .map {
+            it
+                .toList()
+                .subList(adjustment.first, width)
+                .toTypedArray()
+        }
+        .toTypedArray()
     val blocks = arrangedInput.chunk(side = 2)
     outer@ for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
@@ -213,7 +222,12 @@ fun BufferedImage.extractData(): Array<Byte> {
                             try {
                                 List(n - it.size) { 0.toByte() } + it
                             } catch (_: IllegalArgumentException) {
-                                List(n) { 0.toByte() }
+                                val adj = when {
+                                    r == 0 -> adjustment.copy(second = 1)
+                                    c == 0 -> adjustment.copy(first = 1)
+                                    else -> adjustment.copy(first = 1, second = 1)
+                                }
+                                return extractData(adjustment = adj)
                             }
                         }
                     bits.addAll(bitPart)
@@ -221,13 +235,13 @@ fun BufferedImage.extractData(): Array<Byte> {
             }
         }
     }
-    bits = bits.toList().windowed(
-        size = 7,
-        step = 7,
-        partialWindows = false
-    ) {
-        decode(it.toTypedArray()).toList()
-    }.flatten().toMutableList()
+//    bits = bits.toList().windowed(
+//        size = 7,
+//        step = 7,
+//        partialWindows = false
+//    ) {
+//        decode(it.toTypedArray()).toList()
+//    }.flatten().toMutableList()
     bits = bits.toList().windowed(
         size = 4,
         step = 4,

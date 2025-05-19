@@ -248,11 +248,12 @@ fun ExtractingScreen(
                     inputPath?.let {
                         val inputFile = File(it)
                         val inputImage = ImageIO.read(inputFile)
-                        val safeInputImage = inputImage.getSafeImage()
-                        val extractedBytes = safeInputImage
-                            .ensureEvenDimensions()
+                        val extractedBytes = inputImage
+                            .getSafeImage()
                             .extractData()
-                        extractedData = extractedBytes.toByteArray().decodeToString()
+                        extractedData = extractedBytes
+                            .toByteArray()
+                            .decodeToString()
                     }
                 },
                 text = "Извлечь данные"
