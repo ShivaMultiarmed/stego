@@ -4,6 +4,7 @@ import mikhail.shell.stego.task3.END_FLAG
 import mikhail.shell.stego.task3.MAX_PAYLOAD_SIZE
 import mikhail.shell.stego.task3.START_FLAG
 import java.awt.image.BufferedImage
+import java.awt.image.BufferedImage.TYPE_BYTE_GRAY
 import java.awt.image.DataBufferByte
 import java.awt.image.DataBufferInt
 import kotlin.experimental.and
@@ -171,4 +172,22 @@ inline fun <reified T> Array<T>.toVector(): Array<Array<T>> {
             this[index]
         }
     }
+}
+
+fun BufferedImage.ensureEvenDimensions(): BufferedImage {
+    val newW = if (width % 2 == 0) width else width + 1
+    val newH = if (height % 2 == 0) height else height + 1
+    if (newW == width && newH == height) return this
+
+    val out = BufferedImage(newW, newH, TYPE_BYTE_GRAY)
+    // копируем исходное изображение
+    out.graphics.drawImage(this, 0, 0, null)
+    // дублируем последний столбец/строку
+    for (y in 0 until newH) {
+        out.raster.setSample(newW - 1, y, 0, this.raster.getSample(width - 1, y, 0))
+    }
+    for (x in 0 until newW) {
+        out.raster.setSample(x, newH - 1, 0, out.raster.getSample(x, height - 1, 0))
+    }
+    return out
 }

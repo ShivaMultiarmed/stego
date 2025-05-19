@@ -14,10 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.launch
-import mikhail.shell.stego.common.StegoButton
-import mikhail.shell.stego.common.openFiles
-import mikhail.shell.stego.common.TabRow
-import mikhail.shell.stego.common.getSafeImage
+import mikhail.shell.stego.common.*
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -86,7 +83,7 @@ fun IntegratingScreen(
     val screenScrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     var progress by remember { mutableStateOf(1f) }
-    Box (
+    Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -113,7 +110,10 @@ fun IntegratingScreen(
                 StegoButton(
                     onClick = {
                         val selectedFiles =
-                            openFiles(parent, if (inputPaths.isEmpty()) "Выберите изображения" else "Измените изображения")
+                            openFiles(
+                                parent,
+                                if (inputPaths.isEmpty()) "Выберите изображения" else "Измените изображения"
+                            )
                         if (selectedFiles != null) {
                             inputPaths.clear()
                             selectedFiles.forEach(inputPaths::add)
@@ -148,9 +148,6 @@ fun IntegratingScreen(
                             ImageIO.write(interpolatedImage, interpolatedFile.extension, interpolatedFile)
                             val dataBytes = data.encodeToByteArray()
                             val outputImage = interpolatedImage.insertData(dataBytes.toTypedArray())
-                            for (byte in dataBytes) {
-                                print("$byte ")
-                            }
                             val outputFile = File(
                                 inputFile.parentFile,
                                 inputFile.nameWithoutExtension + "-output." + inputFile.extension
@@ -252,11 +249,10 @@ fun ExtractingScreen(
                         val inputFile = File(it)
                         val inputImage = ImageIO.read(inputFile)
                         val safeInputImage = inputImage.getSafeImage()
-                        val extractedBytes = safeInputImage.extractData()
+                        val extractedBytes = safeInputImage
+                            .ensureEvenDimensions()
+                            .extractData()
                         extractedData = extractedBytes.toByteArray().decodeToString()
-                        for (byte in extractedBytes) {
-                            print("$byte ")
-                        }
                     }
                 },
                 text = "Извлечь данные"

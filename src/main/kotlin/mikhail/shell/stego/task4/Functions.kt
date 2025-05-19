@@ -209,7 +209,13 @@ fun BufferedImage.extractData(): Array<Byte> {
                     val bitPart = Integer.toBinaryString(b)
                         .asSequence().toList()
                         .map { it.digitToInt().toByte() }
-                        .let { List(n - it.size) { 0.toByte() } + it }
+                        .let {
+                            try {
+                                List(n - it.size) { 0.toByte() } + it
+                            } catch (_: IllegalArgumentException) {
+                                List(n) { 0.toByte() }
+                            }
+                        }
                     bits.addAll(bitPart)
                 }
             }
