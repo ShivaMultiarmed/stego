@@ -239,7 +239,7 @@ fun BufferedImage.extractData(key: Array<Byte>, adjustment: Pair<Int, Int> = 0 t
                         r == 0 -> (block[0][0] + right[0][0]) / K
                         else -> (block[0][0] + bottom[0][0]) / K
                     }.let { floor(it) }
-                    val b = (block[r][c] - initialByte).toInt()
+                    val b = abs(block[r][c] - initialByte).toInt()
                     val d = initialByte - block[0][0]
                     val n = d.getN()
                     if (n == 0) {
@@ -253,9 +253,9 @@ fun BufferedImage.extractData(key: Array<Byte>, adjustment: Pair<Int, Int> = 0 t
                                 List(n - it.size) { 0.toByte() } + it
                             } catch (_: IllegalArgumentException) {
                                 val adj = when {
-                                    r == 0 -> adjustment.copy(second = 1)
-                                    c == 0 -> adjustment.copy(first = 1)
-                                    else -> adjustment.copy(first = 1, second = 1)
+                                    r == 0 -> adjustment.copy(second = adjustment.second + 1)
+                                    c == 0 -> adjustment.copy(first = adjustment.first + 1)
+                                    else -> adjustment.copy(first = adjustment.first + 1, second = adjustment.second + 1)
                                 }
                                 return extractData(key = key, adjustment = adj)
                             }
