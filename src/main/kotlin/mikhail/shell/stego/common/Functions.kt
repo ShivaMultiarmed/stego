@@ -83,18 +83,15 @@ fun unpack(bits: Array<Byte>): Array<Byte> {
             val endFlag = endFlagBits.implode()
 
             if (endFlag == END_FLAG) {
-                // Добавляем полезную нагрузку в результат
                 val payload = bits.slice(i + flagSize until endFlagStart)
                 result.addAll(payload)
                 i += packetSize
                 continue
             } else {
-                // Если конечный флаг не совпал, сдвигаемся на 1 бит, чтобы не пропустить пакет
-                i += 1
+                i++
             }
         } else {
-            // Если стартовый флаг не совпал, сдвигаемся на 1 бит
-            i += 1
+            i++
         }
     }
 
