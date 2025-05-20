@@ -19,6 +19,7 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import javax.imageio.ImageIO
+import kotlin.random.Random
 
 fun main() = application {
     var screen by remember { mutableStateOf(InterpolatingScreen.INTEGRATING_SCREEN) }
@@ -105,10 +106,21 @@ fun IntegratingScreen(
             val mse = remember { mutableStateListOf<Float>() }
             val psnr = derivedStateOf { mse.map { evaluatePSNR(255f, it) } }
             var keyString by remember { mutableStateOf("") }
-            TextField(
-                value = keyString,
-                onValueChange = { keyString = it }
+
+            StegoButton(
+                text = "Сгенерировать ключ",
+                onClick = {
+                    keyString = Random
+                        .Default
+                        .generateKey()
+                        .toByteArray()
+                        .decodeToString()
+                }
             )
+            TextField(
+                    value = keyString,
+                    onValueChange = { keyString = it }
+                )
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {

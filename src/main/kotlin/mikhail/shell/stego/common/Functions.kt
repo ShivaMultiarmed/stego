@@ -183,7 +183,6 @@ infix fun Array<Byte>.xor(other: Array<Byte>): Array<Byte> {
 
 fun Random.generateKey(): Array<Byte> {
     return this
-        .nextBytes(18)
+        .nextBytes(16)
         .toTypedArray()
-        .decompose()
 }

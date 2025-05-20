@@ -79,7 +79,7 @@ fun BufferedImage.interpolate(): BufferedImage {
     return output
 }
 
-fun encodeSmallBlock(bits: Array<Byte>): Array<Byte> {
+fun encode(bits: Array<Byte>): Array<Byte> {
     val parityMatrix = arrayOf(
         byteArrayOf(1, 1, 1, 0, 1, 0, 0),
         byteArrayOf(1, 0, 0, 1, 0, 1, 0),
@@ -88,22 +88,10 @@ fun encodeSmallBlock(bits: Array<Byte>): Array<Byte> {
     return encode(parityMatrix, bits)
 }
 
-fun decodeSmallBlock(bits: Array<Byte>): Array<Byte> {
+fun decode(bits: Array<Byte>): Array<Byte> {
     return decode(4, bits)
 }
 
-fun encodeLargeBlock(bits: Array<Byte>): Array<Byte> {
-    val parityMatrix = arrayOf(
-        byteArrayOf(1, 1, 1, 0, 1, 0, 0),
-        byteArrayOf(1, 0, 0, 1, 0, 1, 0),
-        byteArrayOf(0, 1, 0, 1, 0, 0, 1)
-    ).map { it.toTypedArray() }.toTypedArray()
-    return encode(parityMatrix, bits)
-}
-
-fun decodeLargeBlock(bits: Array<Byte>): Array<Byte> {
-    return decode(4, bits)
-}
 
 fun hash(bits: Array<Byte>): Array<Byte> {
     val hashMatrix = arrayOf(
@@ -130,12 +118,6 @@ fun BufferedImage.insertData(data: Array<Byte>, key: Array<Byte>): BufferedImage
     val imageMatrix = inputBuffer
         .toTypedArray()
         .arrange(width, height)
-    val initialImageMatrix = Array(height / 2) { i ->
-        Array(width / 2) { j ->
-            imageMatrix[i * 2][j * 2]
-        }
-    }
-    val noises = evaluateNoises(initialImageMatrix)
     var bitNum = 0
     var bits = data.decompose()
     val keyBits = key.decompose()
@@ -154,13 +136,13 @@ fun BufferedImage.insertData(data: Array<Byte>, key: Array<Byte>): BufferedImage
     ) {
         hash(it.toTypedArray()).toList()
     }.flatten().toTypedArray()
-//    bits = bits.toList().windowed(
-//        size = 4,
-//        step = 4,
-//        partialWindows = false
-//    ) {
-//        encode(it.toTypedArray()).toList()
-//    }.flatten().toTypedArray()
+    bits = bits.toList().windowed(
+        size = 4,
+        step = 4,
+        partialWindows = false
+    ) {
+        encode(it.toTypedArray()).toList()
+    }.flatten().toTypedArray()
     val blocks = imageMatrix.chunk(side = 2)
     for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
@@ -224,7 +206,7 @@ fun BufferedImage.extractData(key: Array<Byte>, adjustment: Pair<Int, Int> = 0 t
         }
         .toTypedArray()
     val blocks = arrangedInput.chunk(side = 2)
-    outer@ for (i in 1 until blocks.size - 1) {
+    for (i in 1 until blocks.size - 1) {
         for (j in 1 until blocks[0].size - 1) {
             val block = blocks[i][j]
             val right = blocks[i][j + 1]
@@ -265,13 +247,13 @@ fun BufferedImage.extractData(key: Array<Byte>, adjustment: Pair<Int, Int> = 0 t
             }
         }
     }
-//    bits = bits.toList().windowed(
-//        size = 7,
-//        step = 7,
-//        partialWindows = false
-//    ) {
-//        decode(it.toTypedArray()).toList()
-//    }.flatten().toMutableList()
+    bits = bits.toList().windowed(
+        size = 7,
+        step = 7,
+        partialWindows = false
+    ) {
+        decode(it.toTypedArray()).toList()
+    }.flatten().toMutableList()
     bits = bits.toList().windowed(
         size = 4,
         step = 4,
