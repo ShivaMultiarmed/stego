@@ -47,21 +47,38 @@ fun extractFromString(
     template: String,
     string: String,
     maps: List<Map<Int, String>>
-): Array<Byte> {
+): Array<Byte> { // Возвращает биты
     val result = mutableListOf<Byte>()
-    maps.forEachIndexed { i, map ->
-        val portionLength = log(map.keys.max().toDouble() + 1, 2.0).toInt()
-        for (entry in map.entries) {
-            if (string.contains(entry.value)) {
-                val bitsToBeAdded = entry.key.toByte().explode().sliceArray(8 - portionLength until 8)
-                result.addAll(bitsToBeAdded)
-                break
+    var bitIndex = 0
+    var charIndex = 0
+    var substitutionIndex = 0
+    while (charIndex < template.length) {
+        if (template[charIndex] != '~') {
+            if (string[charIndex * 2] == zeroSymbol) result.add(0) else result.add(1)
+            charIndex++
+        } else {
+            val restString = string
+                .substring(charIndex * 2)
+            val modifiedRestString = restString
+                .replace(zeroSymbol.toString(), "")
+                .replace(oneSymbol.toString(), "")
+            for (entry in maps[substitutionIndex]) {
+                if (modifiedRestString.indexOf(entry.value) == 0) {
+                    val bitGroup = entry.key.toByte().explode()
+                    result.addAll(bitGroup)
+                    for (symbol in restString.substring(0, entry.value.length * 2)){
+                        if (symbol == zeroSymbol) result.add(0)
+                        else if (symbol == oneSymbol) result.add(1)
+                    }
+                    break
+                }
             }
+
+            substitutionIndex++
         }
     }
     return result.toTypedArray()
 }
-
 
 val template = """
                     Work-life balance is ~. When you ~ you ~ your mind
