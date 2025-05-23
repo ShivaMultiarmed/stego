@@ -3,15 +3,14 @@ package mikhail.shell.stego.common
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import jdk.jfr.Enabled
 import java.awt.FileDialog
 import java.awt.Frame
 
@@ -98,4 +97,33 @@ fun Tab(
             text = title
         )
     }
+}
+
+@Composable
+fun StegoTextField(
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean = true
+) {
+    OutlinedTextField(
+        label = {
+            if (label != null) {
+                Text ( text = label)
+            }
+        },
+        modifier = modifier,
+        value = value,
+        onValueChange = onValueChange,
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            textColor = Color(20, 20, 20),
+            focusedBorderColor = Color(106, 162, 252),
+            focusedLabelColor = Color(106, 162, 252),
+            backgroundColor = Color(240, 240, 240),
+            unfocusedBorderColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(10.dp),
+        enabled = enabled
+    )
 }

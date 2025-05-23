@@ -1,5 +1,7 @@
 package mikhail.shell.stego.task8
 
+import mikhail.shell.stego.common.compose
+import mikhail.shell.stego.common.decompose
 import mikhail.shell.stego.common.explode
 import mikhail.shell.stego.common.implode
 import kotlin.math.log
@@ -19,7 +21,8 @@ fun generateString(
     var substitutionIndex = 0
     while (charIndex < resultBuilder.toString().length) {
         if (resultBuilder[charIndex] != '~') {
-            val bitSymbol = if (bitIndex < bitSequence.size && bitSequence[bitIndex] == 1.toByte()) oneSymbol else zeroSymbol
+            val bitSymbol =
+                if (bitIndex < bitSequence.size && bitSequence[bitIndex] == 1.toByte()) oneSymbol else zeroSymbol
             resultBuilder.insert(charIndex, bitSymbol)
             charIndex += 2
             bitIndex++
@@ -66,7 +69,7 @@ fun extractFromString(
                 if (modifiedRestString.indexOf(entry.value) == 0) {
                     val bitGroup = entry.key.toByte().explode()
                     result.addAll(bitGroup)
-                    for (symbol in restString.substring(0, entry.value.length * 2)){
+                    for (symbol in restString.substring(0, entry.value.length * 2)) {
                         if (symbol == zeroSymbol) result.add(0)
                         else if (symbol == oneSymbol) result.add(1)
                     }
@@ -207,3 +210,34 @@ val generationKey = listOf(
         3 to "with caution"
     )
 )
+
+fun String.insert(dataBytes: Array<Byte>): String { // Принимает байты
+    val dataBits = dataBytes.decompose()
+
+    val stringBuilder = StringBuilder()
+
+    try {
+        for (i in dataBits.indices) {
+            val bitSymbol = if (dataBits[i] == 0.toByte()) zeroSymbol else oneSymbol
+            stringBuilder.append(bitSymbol)
+            stringBuilder.append(this[i])
+        }
+        stringBuilder.append(this.substring(dataBits.size))
+    } catch (_: StringIndexOutOfBoundsException) { }
+
+    return stringBuilder.toString()
+}
+
+fun String.extract(): Array<Byte> { // Возвращает байты
+    val dataBits = mutableListOf<Byte>() // биты
+
+    for (char in this) {
+        if (char == zeroSymbol) {
+            dataBits.add(0)
+        } else if (char == oneSymbol) {
+            dataBits.add(1)
+        }
+    }
+
+    return dataBits.toTypedArray().compose()
+}

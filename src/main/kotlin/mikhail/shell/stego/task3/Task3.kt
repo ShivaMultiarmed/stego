@@ -10,10 +10,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import mikhail.shell.stego.common.StegoButton
-import mikhail.shell.stego.common.TabRow
-import mikhail.shell.stego.common.getSafeImage
-import mikhail.shell.stego.common.openFiles
+import mikhail.shell.stego.common.*
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -70,14 +67,13 @@ fun IntegratingScreen(
         modifier = Modifier
             //.verticalScroll(rememberScrollState())
     ) {
-        TextField(
+        StegoTextField(
             value = data,
             onValueChange = {
                 data = it
             },
             modifier = Modifier
-                .width(500.dp)
-                .height(300.dp)
+                .size(500.dp, 300.dp)
         )
         StegoButton (
             onClick = {
