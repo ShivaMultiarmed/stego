@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp

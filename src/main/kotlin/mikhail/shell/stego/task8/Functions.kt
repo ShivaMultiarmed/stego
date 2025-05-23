@@ -1,9 +1,6 @@
 package mikhail.shell.stego.task8
 
-import mikhail.shell.stego.common.compose
-import mikhail.shell.stego.common.decompose
-import mikhail.shell.stego.common.explode
-import mikhail.shell.stego.common.implode
+import mikhail.shell.stego.common.*
 import kotlin.math.log
 
 val zeroSymbol = "\uFE0E"[0]
@@ -14,7 +11,7 @@ fun generateString(
     bitSequence: Array<Byte>,
     maps: List<Map<Int, String>>
 ): String {
-
+    val bitSequence = pack(bitSequence)
     var resultBuilder = StringBuilder(template)
     var bitIndex = 0
     var charIndex = 0
@@ -80,7 +77,7 @@ fun extractFromString(
             substitutionIndex++
         }
     }
-    return result.toTypedArray()
+    return unpack(result.toTypedArray())
 }
 
 val template = """
@@ -212,7 +209,7 @@ val generationKey = listOf(
 )
 
 fun String.insert(dataBytes: Array<Byte>): String { // Принимает байты
-    val dataBits = dataBytes.decompose()
+    val dataBits = pack(dataBytes.decompose())
 
     val stringBuilder = StringBuilder()
 
@@ -239,5 +236,5 @@ fun String.extract(): Array<Byte> { // Возвращает байты
         }
     }
 
-    return dataBits.toTypedArray().compose()
+    return unpack(dataBits.toTypedArray()).compose()
 }
