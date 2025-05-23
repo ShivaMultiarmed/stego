@@ -115,8 +115,27 @@ tasks.create<Jar>("stego5") {
         )
     }
     from(sourceSets.main.get().output) {
-        include("mikhail/shell/stego/task4/**")
         include("mikhail/shell/stego/task5/**")
+        include("mikhail/shell/stego/common/**")
+    }
+    dependsOn(configurations.runtimeClasspath)
+    duplicatesStrategy = EXCLUDE
+    from(
+        {
+            configurations.runtimeClasspath.get().filter { it.exists() }.map { zipTree(it) }
+        }
+    )
+}
+
+tasks.create<Jar>("stego8") {
+    archiveFileName = "stego-8.jar"
+    manifest {
+        attributes(
+            "Main-Class" to "mikhail.shell.stego.task8.MainKt"
+        )
+    }
+    from(sourceSets.main.get().output) {
+        include("mikhail/shell/stego/task8/**")
         include("mikhail/shell/stego/common/**")
     }
     dependsOn(configurations.runtimeClasspath)
