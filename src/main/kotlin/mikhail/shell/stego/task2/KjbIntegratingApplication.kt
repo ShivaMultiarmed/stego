@@ -3,24 +3,27 @@ package mikhail.shell.stego.task2
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.TextArea
-import javafx.scene.control.TextField
 import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
 import javafx.scene.text.Text
 import javafx.stage.FileChooser
 import javafx.stage.Stage
+import mikhail.shell.stego.common.compose
+import mikhail.shell.stego.common.decompose
+import mikhail.shell.stego.common.pack
+import mikhail.shell.stego.common.unpack
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.Random
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
-class DwmIntegratingApplication : Stage() {
+class KjbIntegratingApplication : Stage() {
     private val random = Random()
     private val root = VBox()
     private var inputFile: File? = null
     private var outputFile: File? = null
-    private var bytesDWM = ByteArray(0)
+    private var dataBytes = ByteArray(0)
     private val sigma = 3
 
     init {
@@ -53,7 +56,7 @@ class DwmIntegratingApplication : Stage() {
         }
         root.children.add(field)
         field.textProperty().addListener { _, _, newValue ->
-            bytesDWM = newValue.encodeToByteArray()
+            dataBytes = newValue.encodeToByteArray()
         }
     }
 
@@ -62,7 +65,7 @@ class DwmIntegratingApplication : Stage() {
         root.children.add(button)
         button.setOnMouseClicked {
             if (inputFile != null && outputFile != null) {
-                processImage(inputFile!!, outputFile!!)
+                insertData(inputFile!!, outputFile!!)
                 val resultImage = ImageView(outputFile!!.absolutePath).apply {
                     fitWidth = 300.0
                     isPreserveRatio = true
@@ -72,49 +75,36 @@ class DwmIntegratingApplication : Stage() {
                     root.children.remove(previousImageView)
                     val previousDwmView = root.children.last { it is Text }
                     root.children.remove(previousDwmView)
-                } catch (e: NoSuchElementException) {}
+                } catch (_: NoSuchElementException) {}
                 root.children.add(resultImage)
             }
         }
     }
 
     private fun createExtractingButton() {
-        val button = Button("Извлечь ЦВЗ")
+        val button = Button("Извлечь данные")
         root.children.add(button)
         button.setOnMouseClicked {
             if (inputFile != null && outputFile != null) {
-                val extractedDwm = extractDwm(outputFile!!).decodeToString()
+                val extractedDwm = extractData(outputFile!!).decodeToString()
                 val extractedDwmView = Text(extractedDwm)
                 root.children.add(extractedDwmView)
             }
         }
     }
 
-    private fun extractDwm(file: File): ByteArray {
+    private fun extractData(file: File): ByteArray {
         val dwmBits = mutableListOf<Int>()
         val bufferedImage = ImageIO.read(file)
-        val dwmBitLength = bytesDWM.size * 8
         for (i in sigma + 1..<bufferedImage.width - sigma) {
             for (j in sigma + 1..<bufferedImage.height - sigma) {
                 val pixel = bufferedImage.getRGB(i, j)
                 val B = getBlue(pixel)
                 val avgB = evaluateAverageBlue(bufferedImage, i, j)
                 dwmBits.add(if (B > avgB) 1 else 0)
-                if (dwmBits.size == dwmBitLength) {
-                    break
-                }
-            }
-            if (dwmBits.size == dwmBitLength) {
-                break
             }
         }
-        return ByteArray(dwmBits.size / 8) {
-            var byteValue = 0
-            for (bit in 0 until 8) {
-                byteValue = (byteValue shl 1) or dwmBits[it * 8 + bit]
-            }
-            byteValue.toByte()
-        }
+        return unpack(dwmBits.map { it.toByte() }.toTypedArray()).compose().toByteArray()
     }
 
     private fun evaluateAverageBlue(bufferedImage: BufferedImage, x: Int, y: Int): Int {
@@ -140,26 +130,27 @@ class DwmIntegratingApplication : Stage() {
         return pixel and 0xFF
     }
 
-    private fun processImage(inputFile: File, outputFile: File) {
+    private fun insertData(inputFile: File, outputFile: File) {
         val bufferedImage = ImageIO.read(inputFile)
+        val bits = pack(dataBytes.toTypedArray().decompose())
         var bitsWritten = 0
         for (i in sigma + 1..<bufferedImage.width - sigma) {
             for (j in sigma + 1..<bufferedImage.height - sigma) {
                 val pixel = bufferedImage.getRGB(i, j)
-                val bit = bytesDWM.getBit(bitsWritten)
+                val bit = bits[bitsWritten].toInt()
                 val newPixel = evaluateNewPixel(pixel, bit, bufferedImage.colorModel.pixelSize == 32)
                 bufferedImage.setRGB(i, j, newPixel)
                 bitsWritten++
-                if (bitsWritten == bytesDWM.size * 8)
+                if (bitsWritten == dataBytes.size * 8)
                     break
             }
-            if (bitsWritten == bytesDWM.size * 8)
+            if (bitsWritten == dataBytes.size * 8)
                 break
         }
         ImageIO.write(bufferedImage, outputFile.extension, outputFile)
     }
 
-    private fun generateRandomDwm(bytesNumber: Int): ByteArray {
+    private fun generateRandomBytes(bytesNumber: Int): ByteArray {
         val bytes = ByteArray(bytesNumber)
         random.nextBytes(bytes)
         return bytes
@@ -180,11 +171,10 @@ class DwmIntegratingApplication : Stage() {
             (R shl 16) or (G shl 8) or newB
         }
     }
-}
-
-fun ByteArray.getBit(bitNumber: Int): Int {
-    val byteNumber = bitNumber / 8
-    val specificBitNumber = bitNumber % 8
-    val byte = this[byteNumber].toInt()
-    return byte shr (7 - specificBitNumber) and 1
+    private fun ByteArray.getBit(bitNumber: Int): Int {
+        val byteNumber = bitNumber / 8
+        val specificBitNumber = bitNumber % 8
+        val byte = this[byteNumber].toInt()
+        return byte shr (7 - specificBitNumber) and 1
+    }
 }

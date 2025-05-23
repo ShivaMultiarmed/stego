@@ -5,7 +5,7 @@ import javafx.stage.Stage
 
 class Task2: Application() {
     override fun start(stage: Stage?) {
-        DwmIntegratingApplication()
+        KjbIntegratingApplication()
     }
 }
 
